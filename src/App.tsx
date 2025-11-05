@@ -77,17 +77,18 @@ const App: React.FC = () => {
     return () => unsubApp();
   }, [currentUser]);
 
-  useEffect(() => {
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(swReg => {
-          console.log('Service Worker is registered', swReg);
-        })
-        .catch(error => {
-          console.error('Service Worker Error', error);
-        });
-    }
-  }, []);
+  // Service Worker disabled for now - not needed for basic functionality
+  // useEffect(() => {
+  //   if ('serviceWorker' in navigator && 'PushManager' in window) {
+  //     navigator.serviceWorker.register('/service-worker.js')
+  //       .then(swReg => {
+  //         console.log('Service Worker is registered', swReg);
+  //       })
+  //       .catch(error => {
+  //         console.error('Service Worker Error', error);
+  //       });
+  //   }
+  // }, []);
   
   // An authenticated user is one who is logged in and NOT anonymous.
   const isAuthenticated = !!currentUser && !currentUser.isAnonymous;

@@ -207,9 +207,9 @@ const Apply: React.FC = () => {
         vehicleReg: formData.vehicleReg,
         insuranceExpiry: formData.insuranceExpiry,
         documents: {
-            badgeDocumentUrl: documentUrls.badgeDocumentUrl || application?.documents?.badgeDocumentUrl,
-            drivingLicenseDocumentUrl: documentUrls.drivingLicenseDocumentUrl || application?.documents?.drivingLicenseDocumentUrl,
-            insuranceDocumentUrl: documentUrls.insuranceDocumentUrl || application?.documents?.insuranceDocumentUrl,
+            badgeDocumentUrl: documentUrls.badgeDocumentUrl || application?.documents?.badgeDocumentUrl || '',
+            drivingLicenseDocumentUrl: documentUrls.drivingLicenseDocumentUrl || application?.documents?.drivingLicenseDocumentUrl || '',
+            insuranceDocumentUrl: documentUrls.insuranceDocumentUrl || application?.documents?.insuranceDocumentUrl || '',
         },
         status: ApplicationStatus.Submitted,
         createdAt: application?.createdAt || Date.now(),
