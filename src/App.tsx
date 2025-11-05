@@ -64,13 +64,23 @@ const App: React.FC = () => {
     let unsubApp: () => void = () => {};
     if (currentUser) {
       const appRef = doc(db, 'applications', currentUser.uid);
-      unsubApp = onSnapshot(appRef, (docSnap) => {
-        if (docSnap.exists()) {
-          setApplication(docSnap.data() as Application);
-        } else {
-          setApplication(null);
+      unsubApp = onSnapshot(
+        appRef,
+        (docSnap) => {
+          if (docSnap.exists()) {
+            setApplication(docSnap.data() as Application);
+          } else {
+            setApplication(null);
+          }
+        },
+        (error) => {
+          // Handle permission denied errors (e.g., when user logs out)
+          console.log('Application listener error:', error.code);
+          if (error.code === 'permission-denied') {
+            setApplication(null);
+          }
         }
-      });
+      );
     } else {
       setApplication(null);
     }
