@@ -150,7 +150,7 @@ service firebase.storage {
 
 ## Step 6: Update Your Application Code
 
-1. Open `services/firebase.ts` in your code editor
+1. Open `src/services/firebase.ts` in your code editor
 2. Replace the placeholder configuration with your Firebase config from Step 2:
 
 ```typescript

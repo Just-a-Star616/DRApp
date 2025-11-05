@@ -36,7 +36,7 @@ npm run preview
 
 ### Application State Management
 - **Real-time sync**: Application data stored in Firestore (`applications` collection, keyed by user UID)
-- **Auto-save**: Partial applications auto-saved every 1.5s while user types (see `Apply.tsx:82-89`)
+- **Auto-save**: Partial applications auto-saved every 1.5s while user types (see `src/pages/Apply.tsx:82-89`)
 - **Context**: Global state via `AppContext` (branding, statusSteps, application, currentUser)
 - **Firestore listeners**: Real-time updates using `onSnapshot` for both config and application documents
 
@@ -49,11 +49,11 @@ npm run preview
     statusSteps: [{ status, title, description }]
   }
   ```
-- Configuration loaded via real-time listener in `App.tsx:29-42`
+- Configuration loaded via real-time listener in `src/App.tsx:29-42`
 
 ### Document Upload Flow
 1. Files selected via `FileUpload` component
-2. Uploaded to Firebase Storage in `Apply.tsx` submission handler
+2. Uploaded to Firebase Storage in `src/pages/Apply.tsx` submission handler
 3. Download URLs stored in Firestore application document under `documents` field
 4. File naming pattern: `{timestamp}-{originalName}`
 
@@ -65,30 +65,36 @@ npm run preview
 - Routes: `/home`, `/apply`, `/login`, `/forgot-password`, `/reset-password`, `/confirmation`, `/status`
 
 ### Data Model
-Key types in `types.ts`:
+Key types in `src/types.ts`:
 - `Application`: Contains all applicant data, documents, status, and partial flag
 - `ApplicationStatus`: Enum for tracking stages (Submitted, Under Review, Contacted, Meeting Scheduled, Approved, Rejected)
 - `BrandingConfig`: White-label configuration (company name, logo, primary color)
 
 ### Service Worker
-- Registered in `App.tsx:80-90` for PWA capabilities
+- Registered in `src/App.tsx:80-90` for PWA capabilities
 - Implementation in `service-worker.js` at project root
 - Enables push notifications (via `NotificationBell` component)
+
+### Project Structure
+- **Source directory**: All application code is in `src/` directory
+- **Path alias**: `@` resolves to `src/` directory (configured in `vite.config.ts`)
+- **Subdirectories**: `src/pages/`, `src/components/`, `src/hooks/`, `src/services/`, `src/contexts/`
+- **Entry point**: `src/index.tsx` referenced from `index.html`
 
 ## Important Files
 
 **Configuration:**
-- `services/firebase.ts`: Firebase initialization (requires real config values before deployment)
+- `src/services/firebase.ts`: Firebase initialization (requires real config values before deployment)
 - `vite.config.ts`: Vite configuration with GEMINI_API_KEY environment variable loading
 - `.env.local`: Environment variables (GEMINI_API_KEY)
 
 **Deprecated files** (marked for deletion):
-- `constants.ts`: Status steps now in Firestore
-- `services/googleApiService.ts`: Backend logic should move to Cloud Functions
+- `src/constants.ts`: Status steps now in Firestore
+- `services/googleApiService.ts`: Backend logic should move to Cloud Functions (already deleted)
 
 ## Firebase Setup Requirements
 
-Before deployment, update `services/firebase.ts` with actual Firebase project credentials:
+Before deployment, update `src/services/firebase.ts` with actual Firebase project credentials:
 ```typescript
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
@@ -113,8 +119,8 @@ Firestore collections required:
 
 **Form State Persistence:**
 - Partial applications saved with `isPartial: true` flag
-- Passwords never saved in partial applications (`Apply.tsx:71-73`)
-- Existing partial data pre-fills form on mount (`Apply.tsx:50-58`)
+- Passwords never saved in partial applications (`src/pages/Apply.tsx:71-73`)
+- Existing partial data pre-fills form on mount (`src/pages/Apply.tsx:50-58`)
 
 **File Upload Pattern:**
 - Files stored temporarily in component state

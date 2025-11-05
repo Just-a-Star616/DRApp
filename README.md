@@ -96,18 +96,23 @@ firebase deploy
 
 ```
 /
-├── App.tsx                   # Main app with routing & Firebase auth
-├── pages/                    # Route components
-│   ├── Apply.tsx            # Application form with Firebase integration
-│   ├── Status.tsx           # Application status tracking
-│   ├── Login.tsx            # Firebase authentication
-│   └── ...
-├── components/              # Reusable UI components
-├── hooks/                   # Custom React hooks
-├── services/
-│   └── firebase.ts          # Firebase configuration (UPDATE THIS!)
-├── contexts/                # React context providers
-├── types.ts                 # TypeScript type definitions
+├── src/
+│   ├── App.tsx              # Main app with routing & Firebase auth
+│   ├── index.tsx            # Application entry point
+│   ├── pages/               # Route components
+│   │   ├── Apply.tsx        # Application form with Firebase integration
+│   │   ├── Status.tsx       # Application status tracking
+│   │   ├── Login.tsx        # Firebase authentication
+│   │   └── ...
+│   ├── components/          # Reusable UI components
+│   ├── hooks/               # Custom React hooks
+│   ├── services/
+│   │   └── firebase.ts      # Firebase configuration (UPDATE THIS!)
+│   ├── contexts/            # React context providers
+│   ├── types.ts             # TypeScript type definitions
+│   └── constants.ts         # App constants
+├── index.html               # HTML entry point
+├── vite.config.ts           # Vite configuration
 ├── vercel.json              # Vercel deployment config
 └── FIREBASE_SETUP.md        # Detailed Firebase setup guide
 ```
