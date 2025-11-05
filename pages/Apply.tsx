@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Application, ApplicationStatus } from '../types';
@@ -10,7 +9,7 @@ import PasswordStrength from '../components/PasswordStrength';
 import { usePasswordValidation } from '../hooks/usePasswordValidation';
 import { auth, db, storage } from '../services/firebase';
 import { EmailAuthProvider, linkWithCredential } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAppContext } from '../contexts/AppContext';
 
@@ -62,7 +61,7 @@ const Apply: React.FC = () => {
     if (!currentUser || !currentUser.isAnonymous) return;
     if (!formData.firstName && !formData.email) return; // Don't save empty forms
 
-    const partialData = {
+    const partialData: any = {
         ...formData,
         id: currentUser.uid,
         status: ApplicationStatus.Submitted, // Placeholder status
@@ -180,7 +179,9 @@ const Apply: React.FC = () => {
 
       await setDoc(doc(db, 'applications', user.uid), applicationData);
 
-      navigate('/status');
+      // Force a full page navigation to ensure auth state is correctly loaded on the confirmation page.
+      // This solves a race condition where the user might be redirected to /login incorrectly.
+      window.location.assign('/#/confirmation');
 
     } catch (error: any) {
       console.error("Application submission error:", error);
@@ -205,77 +206,72 @@ const Apply: React.FC = () => {
       <form onSubmit={handleSubmit} className="space-y-8 bg-sky-900/70 p-8 rounded-2xl shadow-2xl border border-sky-800 backdrop-blur-sm">
         <div className="text-left">
           <h1 className="text-3xl font-bold text-white">Driver Application</h1>
-          <p className="mt-2 text-slate-300">Join our team by filling out the form below.</p>
+          <p className="mt-2 text-slate-300">Join our team of professional drivers. Please fill out the form below to get started.</p>
+        </div>
+
+        <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-white border-b border-sky-800 pb-2">Personal Details</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <TextInput id="firstName" label="First Name" value={formData.firstName} onChange={handleChange} error={errors.firstName} required />
+                <TextInput id="lastName" label="Last Name" value={formData.lastName} onChange={handleChange} error={errors.lastName} required />
+                <TextInput id="email" label="Email Address" type="email" value={formData.email} onChange={handleChange} error={errors.email} required />
+                <TextInput id="phone" label="Mobile Number" type="tel" value={formData.phone} onChange={handleChange} error={errors.phone} required />
+                <TextInput id="area" label="Area / City of Work" value={formData.area} onChange={handleChange} error={errors.area} required />
+            </div>
+        </div>
+
+        <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-white border-b border-sky-800 pb-2">Create Account</h2>
+             <TextInput id="password" label="Password" type="password" value={formData.password} onChange={handleChange} error={errors.password} required />
+            <PasswordStrength passwordValidation={passwordValidation} passwordEntered={formData.password.length > 0} />
+            <TextInput id="confirmPassword" label="Confirm Password" type="password" value={formData.confirmPassword} onChange={handleChange} error={errors.confirmPassword} required />
+        </div>
+
+        <div className="space-y-4">
+            <Checkbox id="isLicensedDriver" label="I am an existing licensed private hire driver" checked={formData.isLicensedDriver} onChange={handleChange} />
         </div>
         
-        <div className="border-t border-sky-800 pt-8">
-            <h3 className="text-lg font-semibold text-white mb-4">Your Details</h3>
-            <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
-                <TextInput id="firstName" value={formData.firstName} onChange={handleChange} onBlur={handleSavePartial} error={errors.firstName} required placeholder="First Name" />
-                <TextInput id="lastName" value={formData.lastName} onChange={handleChange} onBlur={handleSavePartial} error={errors.lastName} required placeholder="Last Name" />
-                <TextInput id="email" type="email" value={formData.email} onChange={handleChange} onBlur={handleSavePartial} error={errors.email} required placeholder="Email Address" />
-                <TextInput id="phone" type="tel" value={formData.phone} onChange={handleChange} onBlur={handleSavePartial} error={errors.phone} required placeholder="Mobile Number" />
-                 <div className="sm:col-span-2">
-                    <TextInput id="area" value={formData.area} onChange={handleChange} onBlur={handleSavePartial} error={errors.area} required placeholder="Area / City of Work" />
-                </div>
-            </div>
-        </div>
-
-        <div className="border-t border-sky-800 pt-8">
-             <h3 className="text-lg font-semibold text-white mb-4">Create Your Password</h3>
-             <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
-                <TextInput id="password" type="password" value={formData.password} onChange={handleChange} error={errors.password} required placeholder="Password" />
-                <TextInput id="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleChange} error={errors.confirmPassword} required placeholder="Confirm Password" />
-                <div className="sm:col-span-2">
-                    <PasswordStrength passwordValidation={passwordValidation} passwordEntered={formData.password.length > 0} />
-                </div>
-            </div>
-        </div>
-
-        <div className="border-t border-sky-800 pt-8">
-          <div className="rounded-md border border-slate-600 bg-slate-800/50 p-4">
-            <Checkbox id="isLicensedDriver" label="I am an existing licensed Taxi or Private Hire driver." checked={formData.isLicensedDriver} onChange={handleChange} onBlur={handleSavePartial} />
-          </div>
-        </div>
-
         {formData.isLicensedDriver && (
-            <div className="border-t border-sky-800 pt-8">
-                <h3 className="text-lg font-semibold text-white">License & Vehicle Details (Optional)</h3>
-                <p className="text-sm text-slate-400 mb-4">Please provide as much information as you can.</p>
-                <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
-                    <TextInput id="badgeNumber" value={formData.badgeNumber} onChange={handleChange} onBlur={handleSavePartial} placeholder="Badge Number" />
-                    <TextInput id="badgeExpiry" type="date" value={formData.badgeExpiry} onChange={handleChange} onBlur={handleSavePartial} placeholder="Badge Expiry" />
-                    <div>
-                        <select id="issuingCouncil" value={formData.issuingCouncil} onChange={handleChange} onBlur={handleSavePartial} className="block w-full rounded-md shadow-sm sm:text-sm bg-slate-800 text-white placeholder-slate-400 border-slate-600 focus:border-cyan-500 focus:ring-cyan-500 h-[42px]">
-                            <option value="">Issuing Council</option>
+            <div className="space-y-6 p-6 bg-slate-900/50 rounded-lg border border-sky-800">
+                 <h2 className="text-xl font-semibold text-white border-b border-sky-800 pb-2">License & Vehicle Details</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <TextInput id="badgeNumber" label="Badge Number" value={formData.badgeNumber} onChange={handleChange} />
+                    <TextInput id="badgeExpiry" label="Badge Expiry Date" type="date" value={formData.badgeExpiry} onChange={handleChange} />
+                    <div className="md:col-span-2">
+                        <label htmlFor="issuingCouncil" className="block text-sm font-medium text-slate-300 mb-1">Issuing Council</label>
+                        <select id="issuingCouncil" value={formData.issuingCouncil} onChange={handleChange} className="block w-full rounded-md shadow-sm sm:text-sm bg-slate-800 text-white placeholder-slate-400 border-slate-600 focus:border-cyan-500 focus:ring-cyan-500">
+                             <option value="">Select a council</option>
                             {councils.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                     </div>
-                    <FileUpload id="badgeDocument" label="Badge Document" file={documents.badgeDocument} onFileChange={handleFileChange('badgeDocument')} />
-                    <TextInput id="drivingLicenseNumber" value={formData.drivingLicenseNumber} onChange={handleChange} onBlur={handleSavePartial} placeholder="Driving License Number" />
-                    <TextInput id="licenseExpiry" type="date" value={formData.licenseExpiry} onChange={handleChange} onBlur={handleSavePartial} placeholder="License Expiry" />
-                    <div className="sm:col-span-2">
-                        <FileUpload id="drivingLicenseDocument" label="Driving License Document" file={documents.drivingLicenseDocument} onFileChange={handleFileChange('drivingLicenseDocument')} />
-                    </div>
-                    <TextInput id="vehicleMake" value={formData.vehicleMake} onChange={handleChange} onBlur={handleSavePartial} placeholder="Vehicle Make" />
-                    <TextInput id="vehicleModel" value={formData.vehicleModel} onChange={handleChange} onBlur={handleSavePartial} placeholder="Vehicle Model" />
-                    <TextInput id="vehicleReg" value={formData.vehicleReg} onChange={handleChange} onBlur={handleSavePartial} placeholder="Vehicle Registration" />
-                    <FileUpload id="insuranceDocument" label="Insurance Document" file={documents.insuranceDocument} onFileChange={handleFileChange('insuranceDocument')} />
-                    <TextInput id="insuranceExpiry" type="date" value={formData.insuranceExpiry} onChange={handleChange} onBlur={handleSavePartial} placeholder="Insurance Expiry Date" />
+                    <TextInput id="drivingLicenseNumber" label="Driving License Number" value={formData.drivingLicenseNumber} onChange={handleChange} />
+                    <TextInput id="licenseExpiry" label="License Expiry Date" type="date" value={formData.licenseExpiry} onChange={handleChange} />
+                    <TextInput id="vehicleMake" label="Vehicle Make" value={formData.vehicleMake} onChange={handleChange} />
+                    <TextInput id="vehicleModel" label="Vehicle Model" value={formData.vehicleModel} onChange={handleChange} />
+                    <TextInput id="vehicleReg" label="Vehicle Registration" value={formData.vehicleReg} onChange={handleChange} />
+                    <TextInput id="insuranceExpiry" label="Insurance Expiry Date" type="date" value={formData.insuranceExpiry} onChange={handleChange} />
                 </div>
+                 <div className="space-y-4 pt-4">
+                     <FileUpload id="badgeDocument" label="Upload Badge Document" file={documents.badgeDocument} onFileChange={handleFileChange('badgeDocument')} />
+                    <FileUpload id="drivingLicenseDocument" label="Upload Driving License" file={documents.drivingLicenseDocument} onFileChange={handleFileChange('drivingLicenseDocument')} />
+                    <FileUpload id="insuranceDocument" label="Upload Insurance Certificate" file={documents.insuranceDocument} onFileChange={handleFileChange('insuranceDocument')} />
+                 </div>
             </div>
         )}
-        
+
         {errors.form && <p className="text-sm text-red-500 text-center">{errors.form}</p>}
         
-        <div className="flex items-center justify-between pt-6 border-t border-sky-800">
-          <Link to="/home" className="text-sm font-medium text-slate-300 hover:text-white">
-            &larr; Back to Home
-          </Link>
-          <div className="w-1/2">
-            <Button type="submit" isLoading={isLoading}>Submit Application</Button>
-          </div>
+        <div className="pt-4">
+             <Button type="submit" isLoading={isLoading}>Submit Application</Button>
         </div>
+
+        <div className="text-center text-sm">
+          <span className="text-slate-400">Already applied? </span>
+          <Link to="/login" className="font-medium text-cyan-400 hover:text-cyan-300">
+            Track your application
+          </Link>
+        </div>
+
       </form>
     </div>
   );

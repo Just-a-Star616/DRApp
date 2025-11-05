@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Home from './pages/Home';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import ApplicationConfirmation from './pages/ApplicationConfirmation';
 import { BrandingConfig, Application, ApplicationStatus } from './types';
 import { auth, db } from './services/firebase';
 import { onAuthStateChanged, User, signInAnonymously } from 'firebase/auth';
@@ -122,6 +123,7 @@ const App: React.FC = () => {
             <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/status" />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/confirmation" element={isAuthenticated ? <ApplicationConfirmation /> : <Navigate to="/login" />} />
             <Route path="/status" element={isAuthenticated ? <Status /> : <Navigate to="/login" />} />
             <Route path="*" element={<Navigate to="/home" />} />
           </Routes>
