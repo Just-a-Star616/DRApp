@@ -19,14 +19,22 @@ exports.notifyNewApplication = functions.firestore
     // Only send notification if:
     // 1. It's a new document AND status is "Submitted" AND not partial
     // 2. OR status changed from something else to "Submitted"
+    // 3. OR isPartial changed from true to false (completing a partial application)
     const isNewSubmission = !oldData && newData && newData.status === 'Submitted' && !newData.isPartial;
     const statusChangedToSubmitted = oldData && newData &&
                                      oldData.status !== 'Submitted' &&
                                      newData.status === 'Submitted' &&
                                      !newData.isPartial;
+    const partialCompleted = oldData && newData &&
+                            oldData.isPartial === true &&
+                            newData.isPartial === false &&
+                            newData.status === 'Submitted';
 
-    if (!isNewSubmission && !statusChangedToSubmitted) {
+    if (!isNewSubmission && !statusChangedToSubmitted && !partialCompleted) {
       console.log('Not a new submission, skipping notification');
+      console.log('oldData:', oldData ? 'exists' : 'null');
+      console.log('newData.isPartial:', newData?.isPartial);
+      console.log('oldData.isPartial:', oldData?.isPartial);
       return null;
     }
 
