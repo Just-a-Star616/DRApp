@@ -10,11 +10,12 @@ self.addEventListener('push', function(event) {
     }
   }
 
-  const title = data.title || 'Driver Recruitment App';
+  // Use dynamic branding from notification payload, with fallback defaults
+  const title = data.title || data.companyName || 'Driver Recruitment';
   const options = {
     body: data.body || 'Your application status has been updated.',
-    icon: 'https://i.imgur.com/sCEI0fT.png', // Main icon
-    badge: 'https://i.imgur.com/sCEI0fT.png' // Monochrome icon for notifications bar
+    icon: data.logoUrl || data.icon || '/logo.png',
+    badge: data.logoUrl || data.badge || '/logo.png'
   };
 
   event.waitUntil(self.registration.showNotification(title, options));

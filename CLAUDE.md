@@ -71,9 +71,14 @@ Key types in `src/types.ts`:
 - `BrandingConfig`: White-label configuration (company name, logo, primary color)
 
 ### Service Worker
-- Registered in `src/App.tsx:80-90` for PWA capabilities
 - Implementation in `service-worker.js` at project root
-- Enables push notifications (via `NotificationBell` component)
+- Currently disabled in `src/App.tsx:90-100` (commented out)
+- Enables push notifications for PWA capabilities
+- Uses dynamic branding from push notification payload:
+  - `data.companyName` or `data.title` for notification title
+  - `data.logoUrl` or `data.icon` for notification icon
+  - Fallback to generic defaults if branding not provided
+- When re-enabled, ensure push notifications include branding data from Firestore config
 
 ### Project Structure
 - **Source directory**: All application code is in `src/` directory
