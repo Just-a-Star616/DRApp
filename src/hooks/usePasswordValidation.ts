@@ -13,8 +13,11 @@ export const usePasswordValidation = (password: string) => {
     let strength = 'Weak';
     if (score >= 5) strength = 'Strong';
     else if (score >= 3) strength = 'Medium';
-    
-    return { ...validations, score, strength };
+
+    // Password is valid if all 5 requirements are met
+    const isValid = score === 5;
+
+    return { ...validations, score, strength, isValid };
   }, [password]);
 
   return validation;
