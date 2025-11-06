@@ -249,9 +249,12 @@ const ApplyWizard: React.FC = () => {
     if (validateStep(currentStep)) {
       // Special handling for step 1
       if (currentStep === 1) {
+        console.log('Step 1 -> Next. isLicensedDriver:', formData.isLicensedDriver);
         if (formData.isLicensedDriver) {
+          console.log('Moving to step 2 (licensed flow)');
           setCurrentStep(2); // Go to licensed flow
         } else {
+          console.log('Starting unlicensed flow');
           // For unlicensed, create account and show dashboard
           handleUnlicensedSubmit();
         }
@@ -785,6 +788,8 @@ const ApplyWizard: React.FC = () => {
       </div>
     );
   };
+
+  console.log('ApplyWizard render - currentStep:', currentStep, 'isLicensedDriver:', formData.isLicensedDriver);
 
   return (
     <div className="w-full max-w-3xl mx-auto">
