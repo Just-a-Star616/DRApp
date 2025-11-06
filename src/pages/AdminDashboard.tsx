@@ -6,6 +6,7 @@ import { signOut } from 'firebase/auth';
 import { Application, ApplicationStatus } from '../types';
 import { useAppContext } from '../contexts/AppContext';
 import Button from '../components/Button';
+import SendNotificationModal from '../components/SendNotificationModal';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -17,6 +18,8 @@ const AdminDashboard: React.FC = () => {
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [selectedForNotification, setSelectedForNotification] = useState<Application[]>([]);
 
   // Fetch applications in real-time
   useEffect(() => {
@@ -128,15 +131,29 @@ const AdminDashboard: React.FC = () => {
             <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
             <p className="mt-1 text-slate-300">Manage driver applications</p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="text-sm font-semibold text-slate-300 hover:text-white flex items-center gap-2"
-          >
-            <span>Log Out</span>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => {
+                setSelectedForNotification([]);
+                setShowNotificationModal(true);
+              }}
+              className="px-4 py-2 bg-cyan-900/50 text-cyan-300 hover:bg-cyan-800/50 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              Send Notification
+            </button>
+            <button
+              onClick={handleLogout}
+              className="text-sm font-semibold text-slate-300 hover:text-white flex items-center gap-2"
+            >
+              <span>Log Out</span>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -235,12 +252,26 @@ const AdminDashboard: React.FC = () => {
                         {new Date(app.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-4 py-4 text-sm">
-                        <button
-                          onClick={() => setSelectedApplication(app)}
-                          className="text-cyan-400 hover:text-cyan-300 font-medium"
-                        >
-                          View / Update
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setSelectedApplication(app)}
+                            className="text-cyan-400 hover:text-cyan-300 font-medium"
+                          >
+                            View / Update
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedForNotification([app]);
+                              setShowNotificationModal(true);
+                            }}
+                            className="text-purple-400 hover:text-purple-300 font-medium"
+                            title="Send notification to this applicant"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                            </svg>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -413,6 +444,14 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Send Notification Modal */}
+      <SendNotificationModal
+        isOpen={showNotificationModal}
+        onClose={() => setShowNotificationModal(false)}
+        applications={applications}
+        selectedApplications={selectedForNotification}
+      />
     </div>
   );
 };

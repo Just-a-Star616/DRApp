@@ -352,3 +352,208 @@ exports.sendPushNotification = functions.firestore
       return null;
     }
   });
+
+/**
+ * Cloud Function to send custom notifications to one or multiple applicants
+ * Can send immediately or schedule for later
+ */
+exports.sendCustomNotification = functions.https.onRequest(async (req, res) => {
+  // Set CORS headers
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    res.status(204).send('');
+    return;
+  }
+
+  if (req.method !== 'POST') {
+    res.status(405).send('Method Not Allowed');
+    return;
+  }
+
+  const { recipients, title, message, scheduledFor, sendNow } = req.body;
+
+  if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+    res.status(400).send('Recipients array is required');
+    return;
+  }
+
+  if (!title || !message) {
+    res.status(400).send('Title and message are required');
+    return;
+  }
+
+  try {
+    // Get branding info
+    const configDoc = await admin.firestore().doc('configs/defaultConfig').get();
+    const branding = configDoc.exists ? configDoc.data().branding : null;
+
+    if (sendNow) {
+      // Send notifications immediately
+      const results = [];
+
+      for (const recipientId of recipients) {
+        // Get FCM token
+        const tokenDoc = await admin.firestore().doc(`fcmTokens/${recipientId}`).get();
+
+        if (!tokenDoc.exists) {
+          console.log(`No FCM token found for user: ${recipientId}`);
+          results.push({ recipientId, status: 'no_token' });
+          continue;
+        }
+
+        const fcmToken = tokenDoc.data().token;
+
+        // Create push notification message
+        const notificationMessage = {
+          notification: {
+            title: title,
+            body: message,
+            icon: branding?.logoUrl || '/logo.png',
+          },
+          data: {
+            title: title,
+            message: message,
+            companyName: branding?.companyName || 'Driver Recruitment',
+            logoUrl: branding?.logoUrl || '/logo.png',
+            customNotification: 'true',
+          },
+          token: fcmToken,
+        };
+
+        try {
+          const response = await admin.messaging().send(notificationMessage);
+          console.log(`Successfully sent notification to ${recipientId}:`, response);
+          results.push({ recipientId, status: 'sent', messageId: response });
+        } catch (error) {
+          console.error(`Error sending to ${recipientId}:`, error);
+          results.push({ recipientId, status: 'error', error: error.message });
+        }
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Notifications sent',
+        results: results
+      });
+
+    } else {
+      // Schedule notification for later
+      const scheduledNotification = {
+        recipients,
+        title,
+        message,
+        scheduledFor,
+        branding: branding,
+        status: 'scheduled',
+        createdAt: Date.now(),
+      };
+
+      // Store in Firestore for later processing
+      const docRef = await admin.firestore().collection('scheduledNotifications').add(scheduledNotification);
+
+      res.status(200).json({
+        success: true,
+        message: 'Notification scheduled',
+        notificationId: docRef.id,
+        scheduledFor: scheduledFor
+      });
+    }
+
+  } catch (error) {
+    console.error('Error in sendCustomNotification:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Scheduled function to process scheduled notifications
+ * Runs every minute to check for notifications that need to be sent
+ */
+exports.processScheduledNotifications = functions.pubsub
+  .schedule('every 1 minutes')
+  .onRun(async (context) => {
+    const now = Date.now();
+
+    // Get all scheduled notifications that are due
+    const scheduledSnapshot = await admin.firestore()
+      .collection('scheduledNotifications')
+      .where('status', '==', 'scheduled')
+      .where('scheduledFor', '<=', now)
+      .get();
+
+    if (scheduledSnapshot.empty) {
+      console.log('No scheduled notifications due');
+      return null;
+    }
+
+    console.log(`Processing ${scheduledSnapshot.size} scheduled notifications`);
+
+    const promises = [];
+
+    scheduledSnapshot.forEach((doc) => {
+      const notification = doc.data();
+
+      promises.push(
+        (async () => {
+          const results = [];
+
+          for (const recipientId of notification.recipients) {
+            // Get FCM token
+            const tokenDoc = await admin.firestore().doc(`fcmTokens/${recipientId}`).get();
+
+            if (!tokenDoc.exists) {
+              console.log(`No FCM token found for user: ${recipientId}`);
+              results.push({ recipientId, status: 'no_token' });
+              continue;
+            }
+
+            const fcmToken = tokenDoc.data().token;
+
+            // Create push notification message
+            const message = {
+              notification: {
+                title: notification.title,
+                body: notification.message,
+                icon: notification.branding?.logoUrl || '/logo.png',
+              },
+              data: {
+                title: notification.title,
+                message: notification.message,
+                companyName: notification.branding?.companyName || 'Driver Recruitment',
+                logoUrl: notification.branding?.logoUrl || '/logo.png',
+                customNotification: 'true',
+              },
+              token: fcmToken,
+            };
+
+            try {
+              const response = await admin.messaging().send(message);
+              console.log(`Successfully sent scheduled notification to ${recipientId}`);
+              results.push({ recipientId, status: 'sent', messageId: response });
+            } catch (error) {
+              console.error(`Error sending to ${recipientId}:`, error);
+              results.push({ recipientId, status: 'error', error: error.message });
+            }
+          }
+
+          // Update notification status
+          await doc.ref.update({
+            status: 'sent',
+            sentAt: Date.now(),
+            results: results
+          });
+        })()
+      );
+    });
+
+    await Promise.all(promises);
+    console.log('Finished processing scheduled notifications');
+    return null;
+  });
