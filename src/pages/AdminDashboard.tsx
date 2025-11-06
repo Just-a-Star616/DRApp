@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, onSnapshot, doc, updateDoc, orderBy } from 'firebase/firestore';
-import { auth, db } from '../services/firebase';
+import { auth, db, storage } from '../services/firebase';
 import { signOut } from 'firebase/auth';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Application, ApplicationStatus } from '../types';
 import { useAppContext } from '../contexts/AppContext';
 import Button from '../components/Button';
@@ -27,6 +28,10 @@ const AdminDashboard: React.FC = () => {
   // Edit mode state
   const [isEditingApplication, setIsEditingApplication] = useState(false);
   const [editedDetails, setEditedDetails] = useState<Partial<Application>>({});
+
+  // Document upload state
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState('');
 
   // Fetch applications in real-time
   useEffect(() => {
@@ -204,6 +209,111 @@ const AdminDashboard: React.FC = () => {
     } catch (error) {
       console.error('Error saving edits:', error);
       alert('Failed to save changes. Please try again.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDocumentUpload = async (file: File, documentType: string) => {
+    if (!selectedApplication) return;
+
+    setUploadingDocument(true);
+    setUploadMessage(`Uploading ${documentType}...`);
+
+    try {
+      const storageRef = ref(storage, `documents/${selectedApplication.id}/${Date.now()}-${file.name}`);
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+
+      const updates: any = {};
+      const applicantName = `${selectedApplication.firstName} ${selectedApplication.lastName}`;
+
+      // Map document type to Firestore field
+      const documentFieldMap: { [key: string]: string } = {
+        'Badge Document': 'documents.badgeDocumentUrl',
+        'Driving License': 'documents.drivingLicenseDocumentUrl',
+        'Insurance Certificate': 'documents.insuranceDocumentUrl',
+        'V5C Logbook': 'documents.v5cDocumentUrl',
+        'PHV Licence': 'documents.phvLicenceDocumentUrl',
+        'DBS Certificate': 'unlicensedProgress.dbsDocumentUrl',
+        'Medical Certificate': 'unlicensedProgress.medicalDocumentUrl',
+        'Knowledge Test Certificate': 'unlicensedProgress.knowledgeTestDocumentUrl',
+      };
+
+      const fieldPath = documentFieldMap[documentType];
+      if (fieldPath) {
+        updates[fieldPath] = downloadURL;
+      }
+
+      await updateDoc(doc(db, 'applications', selectedApplication.id), updates);
+
+      // Log the document upload activity
+      if (auth.currentUser) {
+        await logActivity({
+          applicationId: selectedApplication.id,
+          applicantName,
+          applicantEmail: selectedApplication.email,
+          activityType: ActivityType.DocumentUploadedByStaff,
+          actor: ActivityActor.Staff,
+          actorId: auth.currentUser.uid,
+          actorName: auth.currentUser.email || 'Admin Staff',
+          details: `Staff uploaded ${documentType} for applicant`,
+          metadata: { documentType },
+        });
+      }
+
+      setUploadMessage(`${documentType} uploaded successfully!`);
+      setTimeout(() => {
+        setUploadMessage('');
+      }, 3000);
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      setUploadMessage(`Error uploading ${documentType}. Please try again.`);
+    } finally {
+      setUploadingDocument(false);
+    }
+  };
+
+  const handleUnlicensedProgressUpdate = async (field: string, value: boolean) => {
+    if (!selectedApplication || !selectedApplication.unlicensedProgress) return;
+
+    setIsUpdating(true);
+    try {
+      const updates: any = {
+        [`unlicensedProgress.${field}`]: value,
+      };
+
+      await updateDoc(doc(db, 'applications', selectedApplication.id), updates);
+
+      // Log the progress update
+      if (auth.currentUser) {
+        const stepNames: { [key: string]: string } = {
+          eligibilityChecked: 'Eligibility Check',
+          dbsApplied: 'Enhanced DBS Check',
+          medicalBooked: 'Medical Examination',
+          knowledgeTestPassed: 'Knowledge & Safeguarding Test',
+          councilApplicationSubmitted: 'Council Application Submitted',
+        };
+
+        await logActivity({
+          applicationId: selectedApplication.id,
+          applicantName: `${selectedApplication.firstName} ${selectedApplication.lastName}`,
+          applicantEmail: selectedApplication.email,
+          activityType: ActivityType.UnlicensedProgressUpdated,
+          actor: ActivityActor.Staff,
+          actorId: auth.currentUser.uid,
+          actorName: auth.currentUser.email || 'Admin Staff',
+          details: `Staff marked "${stepNames[field]}" as ${value ? 'complete' : 'incomplete'}`,
+          metadata: {
+            step: stepNames[field],
+            oldValue: !value ? 'Complete' : 'Incomplete',
+            newValue: value ? 'Complete' : 'Incomplete',
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Error updating progress:', error);
+      alert('Failed to update progress. Please try again.');
     } finally {
       setIsUpdating(false);
     }
@@ -512,6 +622,13 @@ const AdminDashboard: React.FC = () => {
                 </div>
               )}
 
+              {/* Upload Message */}
+              {uploadMessage && (
+                <div className={`mb-4 p-3 rounded-lg ${uploadMessage.includes('Error') || uploadMessage.includes('Failed') ? 'bg-red-900/20 border border-red-700 text-red-300' : 'bg-green-900/20 border border-green-700 text-green-300'}`}>
+                  {uploadMessage}
+                </div>
+              )}
+
               {/* Contact Info */}
               <div className="mb-6 p-4 bg-slate-800/50 rounded-lg">
                 <h3 className="font-semibold text-white mb-3">Contact Information</h3>
@@ -591,81 +708,196 @@ const AdminDashboard: React.FC = () => {
                   <div className="space-y-3 mb-4">
                     {/* Step 1: Eligibility */}
                     <div className={`p-3 rounded-lg border ${selectedApplication.unlicensedProgress.eligibilityChecked ? 'bg-green-900/20 border-green-700' : 'bg-slate-900/50 border-sky-800'}`}>
-                      <div className="flex items-center gap-3">
-                        {selectedApplication.unlicensedProgress.eligibilityChecked ? (
-                          <svg className="h-5 w-5 text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        ) : (
-                          <svg className="h-5 w-5 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        )}
-                        <span className="text-white text-sm font-medium">1. Eligibility Check</span>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          {selectedApplication.unlicensedProgress.eligibilityChecked ? (
+                            <svg className="h-5 w-5 text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          ) : (
+                            <svg className="h-5 w-5 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          )}
+                          <span className="text-white text-sm font-medium">1. Eligibility Check</span>
+                        </div>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedApplication.unlicensedProgress.eligibilityChecked}
+                            onChange={(e) => handleUnlicensedProgressUpdate('eligibilityChecked', e.target.checked)}
+                            className="w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                            disabled={isUpdating}
+                          />
+                          <span className="text-xs text-slate-400">Mark Complete</span>
+                        </label>
                       </div>
                     </div>
 
                     {/* Step 2: DBS */}
                     <div className={`p-3 rounded-lg border ${selectedApplication.unlicensedProgress.dbsApplied ? 'bg-green-900/20 border-green-700' : 'bg-slate-900/50 border-sky-800'}`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {selectedApplication.unlicensedProgress.dbsApplied ? (
-                            <svg className="h-5 w-5 text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          ) : (
-                            <svg className="h-5 w-5 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          )}
-                          <span className="text-white text-sm font-medium">2. Enhanced DBS Check</span>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            {selectedApplication.unlicensedProgress.dbsApplied ? (
+                              <svg className="h-5 w-5 text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            ) : (
+                              <svg className="h-5 w-5 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            )}
+                            <span className="text-white text-sm font-medium">2. Enhanced DBS Check</span>
+                          </div>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={selectedApplication.unlicensedProgress.dbsApplied}
+                              onChange={(e) => handleUnlicensedProgressUpdate('dbsApplied', e.target.checked)}
+                              className="w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                              disabled={isUpdating}
+                            />
+                            <span className="text-xs text-slate-400">Mark Complete</span>
+                          </label>
                         </div>
-                        {selectedApplication.unlicensedProgress.dbsDocumentUrl && (
-                          <a
-                            href={selectedApplication.unlicensedProgress.dbsDocumentUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-2 py-1 bg-cyan-900/50 text-cyan-300 rounded text-xs hover:bg-cyan-800/50"
-                          >
-                            View Document
-                          </a>
-                        )}
+                        <div className="flex items-center gap-2 ml-8">
+                          {selectedApplication.unlicensedProgress.dbsDocumentUrl ? (
+                            <a
+                              href={selectedApplication.unlicensedProgress.dbsDocumentUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2 py-1 bg-cyan-900/50 text-cyan-300 rounded text-xs hover:bg-cyan-800/50"
+                            >
+                              View Document
+                            </a>
+                          ) : (
+                            <span className="text-xs text-slate-500">No document uploaded</span>
+                          )}
+                          <label className="px-2 py-1 bg-purple-900/50 text-purple-300 rounded text-xs hover:bg-purple-800/50 cursor-pointer">
+                            <input
+                              type="file"
+                              onChange={(e) => e.target.files && handleDocumentUpload(e.target.files[0], 'DBS Certificate')}
+                              className="hidden"
+                              disabled={uploadingDocument}
+                            />
+                            Upload Document
+                          </label>
+                        </div>
                       </div>
                     </div>
 
                     {/* Step 3: Medical */}
                     <div className={`p-3 rounded-lg border ${selectedApplication.unlicensedProgress.medicalBooked ? 'bg-green-900/20 border-green-700' : 'bg-slate-900/50 border-sky-800'}`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {selectedApplication.unlicensedProgress.medicalBooked ? (
-                            <svg className="h-5 w-5 text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          ) : (
-                            <svg className="h-5 w-5 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          )}
-                          <span className="text-white text-sm font-medium">3. Medical Examination</span>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            {selectedApplication.unlicensedProgress.medicalBooked ? (
+                              <svg className="h-5 w-5 text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            ) : (
+                              <svg className="h-5 w-5 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            )}
+                            <span className="text-white text-sm font-medium">3. Medical Examination</span>
+                          </div>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={selectedApplication.unlicensedProgress.medicalBooked}
+                              onChange={(e) => handleUnlicensedProgressUpdate('medicalBooked', e.target.checked)}
+                              className="w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                              disabled={isUpdating}
+                            />
+                            <span className="text-xs text-slate-400">Mark Complete</span>
+                          </label>
                         </div>
-                        {selectedApplication.unlicensedProgress.medicalDocumentUrl && (
-                          <a
-                            href={selectedApplication.unlicensedProgress.medicalDocumentUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-2 py-1 bg-cyan-900/50 text-cyan-300 rounded text-xs hover:bg-cyan-800/50"
-                          >
-                            View Document
-                          </a>
-                        )}
+                        <div className="flex items-center gap-2 ml-8">
+                          {selectedApplication.unlicensedProgress.medicalDocumentUrl ? (
+                            <a
+                              href={selectedApplication.unlicensedProgress.medicalDocumentUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2 py-1 bg-cyan-900/50 text-cyan-300 rounded text-xs hover:bg-cyan-800/50"
+                            >
+                              View Document
+                            </a>
+                          ) : (
+                            <span className="text-xs text-slate-500">No document uploaded</span>
+                          )}
+                          <label className="px-2 py-1 bg-purple-900/50 text-purple-300 rounded text-xs hover:bg-purple-800/50 cursor-pointer">
+                            <input
+                              type="file"
+                              onChange={(e) => e.target.files && handleDocumentUpload(e.target.files[0], 'Medical Certificate')}
+                              className="hidden"
+                              disabled={uploadingDocument}
+                            />
+                            Upload Document
+                          </label>
+                        </div>
                       </div>
                     </div>
 
                     {/* Step 4: Knowledge Test */}
                     <div className={`p-3 rounded-lg border ${selectedApplication.unlicensedProgress.knowledgeTestPassed ? 'bg-green-900/20 border-green-700' : 'bg-slate-900/50 border-sky-800'}`}>
-                      <div className="flex items-center justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            {selectedApplication.unlicensedProgress.knowledgeTestPassed ? (
+                              <svg className="h-5 w-5 text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            ) : (
+                              <svg className="h-5 w-5 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            )}
+                            <span className="text-white text-sm font-medium">4. Knowledge & Safeguarding Test</span>
+                          </div>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={selectedApplication.unlicensedProgress.knowledgeTestPassed}
+                              onChange={(e) => handleUnlicensedProgressUpdate('knowledgeTestPassed', e.target.checked)}
+                              className="w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                              disabled={isUpdating}
+                            />
+                            <span className="text-xs text-slate-400">Mark Complete</span>
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-2 ml-8">
+                          {selectedApplication.unlicensedProgress.knowledgeTestDocumentUrl ? (
+                            <a
+                              href={selectedApplication.unlicensedProgress.knowledgeTestDocumentUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2 py-1 bg-cyan-900/50 text-cyan-300 rounded text-xs hover:bg-cyan-800/50"
+                            >
+                              View Certificate
+                            </a>
+                          ) : (
+                            <span className="text-xs text-slate-500">No certificate uploaded</span>
+                          )}
+                          <label className="px-2 py-1 bg-purple-900/50 text-purple-300 rounded text-xs hover:bg-purple-800/50 cursor-pointer">
+                            <input
+                              type="file"
+                              onChange={(e) => e.target.files && handleDocumentUpload(e.target.files[0], 'Knowledge Test Certificate')}
+                              className="hidden"
+                              disabled={uploadingDocument}
+                            />
+                            Upload Certificate
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Step 5: Council Application */}
+                    <div className={`p-3 rounded-lg border ${selectedApplication.unlicensedProgress.councilApplicationSubmitted ? 'bg-green-900/20 border-green-700' : 'bg-slate-900/50 border-sky-800'}`}>
+                      <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
-                          {selectedApplication.unlicensedProgress.knowledgeTestPassed ? (
+                          {selectedApplication.unlicensedProgress.councilApplicationSubmitted ? (
                             <svg className="h-5 w-5 text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
@@ -674,34 +906,18 @@ const AdminDashboard: React.FC = () => {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                           )}
-                          <span className="text-white text-sm font-medium">4. Knowledge & Safeguarding Test</span>
+                          <span className="text-white text-sm font-medium">5. Council Application Submitted</span>
                         </div>
-                        {selectedApplication.unlicensedProgress.knowledgeTestDocumentUrl && (
-                          <a
-                            href={selectedApplication.unlicensedProgress.knowledgeTestDocumentUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-2 py-1 bg-cyan-900/50 text-cyan-300 rounded text-xs hover:bg-cyan-800/50"
-                          >
-                            View Certificate
-                          </a>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Step 5: Council Application */}
-                    <div className={`p-3 rounded-lg border ${selectedApplication.unlicensedProgress.councilApplicationSubmitted ? 'bg-green-900/20 border-green-700' : 'bg-slate-900/50 border-sky-800'}`}>
-                      <div className="flex items-center gap-3">
-                        {selectedApplication.unlicensedProgress.councilApplicationSubmitted ? (
-                          <svg className="h-5 w-5 text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        ) : (
-                          <svg className="h-5 w-5 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        )}
-                        <span className="text-white text-sm font-medium">5. Council Application Submitted</span>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedApplication.unlicensedProgress.councilApplicationSubmitted}
+                            onChange={(e) => handleUnlicensedProgressUpdate('councilApplicationSubmitted', e.target.checked)}
+                            className="w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                            disabled={isUpdating}
+                          />
+                          <span className="text-xs text-slate-400">Mark Complete</span>
+                        </label>
                       </div>
                     </div>
                   </div>
@@ -989,67 +1205,140 @@ const AdminDashboard: React.FC = () => {
                   </div>
 
                   {/* Documents */}
-                  {(selectedApplication.documents?.badgeDocumentUrl ||
-                    selectedApplication.documents?.drivingLicenseDocumentUrl ||
-                    selectedApplication.documents?.insuranceDocumentUrl ||
-                    selectedApplication.documents?.v5cDocumentUrl ||
-                    selectedApplication.documents?.phvLicenceDocumentUrl) && (
-                    <div className="mt-4">
-                      <h4 className="text-sm font-medium text-slate-300 mb-2">Documents:</h4>
-                      <div className="flex gap-2 flex-wrap">
-                        {selectedApplication.documents.badgeDocumentUrl && (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium text-slate-300 mb-3">Documents:</h4>
+                    <div className="space-y-2">
+                      {/* Badge Document */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400 w-32">Badge Document:</span>
+                        {selectedApplication.documents?.badgeDocumentUrl ? (
                           <a
                             href={selectedApplication.documents.badgeDocumentUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-3 py-1 bg-cyan-900/50 text-cyan-300 rounded text-xs hover:bg-cyan-800/50"
+                            className="px-2 py-1 bg-cyan-900/50 text-cyan-300 rounded text-xs hover:bg-cyan-800/50"
                           >
-                            Badge Document
+                            View Document
                           </a>
+                        ) : (
+                          <span className="text-xs text-slate-500">Not uploaded</span>
                         )}
-                        {selectedApplication.documents.drivingLicenseDocumentUrl && (
+                        <label className="px-2 py-1 bg-purple-900/50 text-purple-300 rounded text-xs hover:bg-purple-800/50 cursor-pointer">
+                          <input
+                            type="file"
+                            onChange={(e) => e.target.files && handleDocumentUpload(e.target.files[0], 'Badge Document')}
+                            className="hidden"
+                            disabled={uploadingDocument}
+                          />
+                          Upload
+                        </label>
+                      </div>
+
+                      {/* Driving License */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400 w-32">Driving License:</span>
+                        {selectedApplication.documents?.drivingLicenseDocumentUrl ? (
                           <a
                             href={selectedApplication.documents.drivingLicenseDocumentUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-3 py-1 bg-cyan-900/50 text-cyan-300 rounded text-xs hover:bg-cyan-800/50"
+                            className="px-2 py-1 bg-cyan-900/50 text-cyan-300 rounded text-xs hover:bg-cyan-800/50"
                           >
-                            Driving License
+                            View Document
                           </a>
+                        ) : (
+                          <span className="text-xs text-slate-500">Not uploaded</span>
                         )}
-                        {selectedApplication.documents.insuranceDocumentUrl && (
+                        <label className="px-2 py-1 bg-purple-900/50 text-purple-300 rounded text-xs hover:bg-purple-800/50 cursor-pointer">
+                          <input
+                            type="file"
+                            onChange={(e) => e.target.files && handleDocumentUpload(e.target.files[0], 'Driving License')}
+                            className="hidden"
+                            disabled={uploadingDocument}
+                          />
+                          Upload
+                        </label>
+                      </div>
+
+                      {/* Insurance Certificate */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400 w-32">Insurance:</span>
+                        {selectedApplication.documents?.insuranceDocumentUrl ? (
                           <a
                             href={selectedApplication.documents.insuranceDocumentUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-3 py-1 bg-cyan-900/50 text-cyan-300 rounded text-xs hover:bg-cyan-800/50"
+                            className="px-2 py-1 bg-cyan-900/50 text-cyan-300 rounded text-xs hover:bg-cyan-800/50"
                           >
-                            Insurance
+                            View Document
                           </a>
+                        ) : (
+                          <span className="text-xs text-slate-500">Not uploaded</span>
                         )}
-                        {selectedApplication.documents.v5cDocumentUrl && (
+                        <label className="px-2 py-1 bg-purple-900/50 text-purple-300 rounded text-xs hover:bg-purple-800/50 cursor-pointer">
+                          <input
+                            type="file"
+                            onChange={(e) => e.target.files && handleDocumentUpload(e.target.files[0], 'Insurance Certificate')}
+                            className="hidden"
+                            disabled={uploadingDocument}
+                          />
+                          Upload
+                        </label>
+                      </div>
+
+                      {/* V5C Logbook */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400 w-32">V5C Logbook:</span>
+                        {selectedApplication.documents?.v5cDocumentUrl ? (
                           <a
                             href={selectedApplication.documents.v5cDocumentUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-3 py-1 bg-cyan-900/50 text-cyan-300 rounded text-xs hover:bg-cyan-800/50"
+                            className="px-2 py-1 bg-cyan-900/50 text-cyan-300 rounded text-xs hover:bg-cyan-800/50"
                           >
-                            V5C Logbook
+                            View Document
                           </a>
+                        ) : (
+                          <span className="text-xs text-slate-500">Not uploaded</span>
                         )}
-                        {selectedApplication.documents.phvLicenceDocumentUrl && (
+                        <label className="px-2 py-1 bg-purple-900/50 text-purple-300 rounded text-xs hover:bg-purple-800/50 cursor-pointer">
+                          <input
+                            type="file"
+                            onChange={(e) => e.target.files && handleDocumentUpload(e.target.files[0], 'V5C Logbook')}
+                            className="hidden"
+                            disabled={uploadingDocument}
+                          />
+                          Upload
+                        </label>
+                      </div>
+
+                      {/* PHV Licence */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400 w-32">PHV Licence:</span>
+                        {selectedApplication.documents?.phvLicenceDocumentUrl ? (
                           <a
                             href={selectedApplication.documents.phvLicenceDocumentUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-3 py-1 bg-cyan-900/50 text-cyan-300 rounded text-xs hover:bg-cyan-800/50"
+                            className="px-2 py-1 bg-cyan-900/50 text-cyan-300 rounded text-xs hover:bg-cyan-800/50"
                           >
-                            PHV Licence
+                            View Document
                           </a>
+                        ) : (
+                          <span className="text-xs text-slate-500">Not uploaded</span>
                         )}
+                        <label className="px-2 py-1 bg-purple-900/50 text-purple-300 rounded text-xs hover:bg-purple-800/50 cursor-pointer">
+                          <input
+                            type="file"
+                            onChange={(e) => e.target.files && handleDocumentUpload(e.target.files[0], 'PHV Licence')}
+                            className="hidden"
+                            disabled={uploadingDocument}
+                          />
+                          Upload
+                        </label>
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               )}
 
