@@ -44,7 +44,7 @@ try {
 const googleProvider = new GoogleAuthProvider();
 
 // VAPID key for FCM (get this from Firebase Console → Project Settings → Cloud Messaging → Web Push certificates)
-const VAPID_KEY = 'YOUR_VAPID_KEY_HERE'; // TODO: Replace with actual VAPID key
+const VAPID_KEY = 'BIVyChwVN7Cnzc6xWc5vomO0uSDediV2yBy3E0ad_28eWx-0t9aRNCgKIjh4uDo1hQ3klxSIYbk2QQd4NcmiSlE'; // TODO: Replace with actual VAPID key
 
 /**
  * Request notification permission and get FCM token
