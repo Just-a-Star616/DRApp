@@ -89,9 +89,9 @@ const Status = () => {
                              <InfoRow label="Insurance Expiry" value={application.insuranceExpiry} />
                             <div className="h-px bg-sky-800 my-4"></div>
                             <h3 className="text-sm font-semibold text-white mb-3 mt-6">Uploaded Documents</h3>
-                            <DocumentPreview label="Badge Document" url={application.documents.badgeDocumentUrl} />
-                            <DocumentPreview label="Driving License" url={application.documents.drivingLicenseDocumentUrl} />
-                            <DocumentPreview label="Insurance Certificate" url={application.documents.insuranceDocumentUrl} />
+                            <DocumentPreview label="Badge Document" url={application.documents?.badgeDocumentUrl} />
+                            <DocumentPreview label="Driving License" url={application.documents?.drivingLicenseDocumentUrl} />
+                            <DocumentPreview label="Insurance Certificate" url={application.documents?.insuranceDocumentUrl} />
                         </>}
                     </dl>
 

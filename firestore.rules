@@ -17,9 +17,9 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Admins collection - only admins can read
+    // Admins collection - authenticated users can check if they are admin
     match /admins/{adminId} {
-      allow read: if request.auth != null && isAdmin();
+      allow read: if request.auth != null && request.auth.uid == adminId;
       allow write: if false; // Manually managed only via Firebase Console
     }
 
