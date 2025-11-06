@@ -8,7 +8,7 @@ service firebase.storage {
     }
 
     // Application documents - users can upload their own, admins can read all
-    match /applications/{userId}/{allPaths=**} {
+    match /documents/{userId}/{allPaths=**} {
       // Allow users to upload their own documents
       allow write: if request.auth != null && request.auth.uid == userId;
       // Allow users to read their own documents, admins can read all
