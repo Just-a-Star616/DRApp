@@ -1,0 +1,148 @@
+Flow 1: The 'Unlicensed Applicant' Journey
+This flow is a "wizard" or checklist. Its goal is to guide the user, track their progress, and keep them engaged over the weeks/months it takes to get a badge.
+
+Step 1: Capture Basic Details
+
+Collect the essentials first (as you do now): Name, Email, Mobile, Postcode/Area of Intended Work.
+
+Crucial Addition: Immediately explain why the Area is so important.
+
+UX Text: "Great. You've chosen to work in [Area]. In the UK, all licensing is handled by the local council for that area. We'll guide you through the specific steps for [Council Name]."
+
+Step 2: The "Get Licensed" Dashboard
+
+This becomes the user's "home screen." It's a checklist of items they need to complete. You don't capture badge details here; you guide them on how to get them.
+
+"Your Roadmap to [Council Name] Licence"
+
+[ ] 1. Check Eligibility
+
+Info: "Most councils require you to be 21+, have the right to work in the UK, and have held a full driving licence for at least 1-3 years."
+
+Action: [Link to [Council Name] eligibility page]
+
+User Checkbox: [ ] "I've checked, and I meet the basic requirements."
+
+[ ] 2. Enhanced DBS Check
+
+Info: "You need an enhanced criminal record (DBS) check. This is mandatory."
+
+Action: [Link to Gov.UK DBS service or the council's approved provider]
+
+User Checkbox: [ ] "I have applied for my DBS check."
+
+Upload: (Optional, but good) "Upload your DBS certificate when it arrives."
+
+[ ] 3. Medical Examination
+
+Info: "You must pass a Group 2 (HGV/Bus) standard medical exam. Your GP or a private service can do this."
+
+Action: [Link to the [Council Name] medical form to be printed]
+
+User Checkbox: [ ] "I have booked my medical exam."
+
+Upload: "Upload your completed medical form."
+
+[ ] 4. Knowledge & Safeguarding Test
+
+Info: "This is the main test. It covers local routes, landmarks, fares, and safeguarding rules for [Area]."
+
+Action: [Link to council's booking page] / [Link to study resources]
+
+User Checkbox: [ ] "I have passed my Knowledge/Safeguarding test."
+
+Upload: "Upload your pass certificate."
+
+[ ] 5. Submit Your Council Application
+
+Info: "Once you have your DBS, Medical, and Test Pass, you can submit your final application to [Council Name]."
+
+Action: [Link to the council's online application portal]
+
+User Checkbox: [ ] "I have submitted my final application to the council."
+
+Step 3: The "Conversion" Point
+
+After the user checks off all items, the dashboard changes.
+
+Screen: "Congratulations on passing! Once your official licence (badge) arrives in the post, you'll be ready for the final step."
+
+Button: "I've received my badge!"
+
+This button is the bridge. Pressing it moves the user permanently into Flow 2.
+
+Flow 2: The 'Licensed Driver' Onboarding
+This is the "fast-track" flow for drivers who are ready to go. This is essentially what you have already built, just structured as a clean, multi-step process.
+
+Step 1: Capture Basic Details
+
+Name, Email, Mobile, Area of Work.
+
+(If they came from Flow 1, you skip this as you already have it).
+
+Step 2: Capture Licence & Badge Details
+
+Issuing Council (Dropdown)
+
+Badge Number
+
+Badge Expiry Date
+
+Step 3: Capture Driving Details
+
+Driving Licence Number
+
+Driving Licence Expiry Date
+
+Step 4: Upload Core Documents
+
+"Upload a clear photo of your Taxi/PHV Badge."
+
+"Upload photos of the front and back of your Driving Licence."
+
+Step 5: Vehicle Details (Conditional)
+
+Question: "Will you be using your own vehicle?"
+
+If NO (e.g., using a fleet car): Skip to Step 7.
+
+If YES: Proceed to Step 6.
+
+Step 6: Capture Vehicle & Insurance Details
+
+Vehicle Make
+
+Vehicle Model
+
+Vehicle Registration Number
+
+Insurance Expiry Date
+
+Uploads:
+
+"Upload your Certificate of Motor Insurance (must show 'Hire & Reward')."
+
+(Optional but recommended) "Upload your Vehicle Logbook (V5C)."
+
+(Optional but recommended) "Upload your Vehicle's PHV Licence."
+
+Step 7: Final Review & Submit
+
+Display all the data the user has entered (Name, Badge No., Vehicle Reg, etc.).
+
+"I confirm all details are correct and my documents are valid."
+
+Button: "Submit Application"
+
+Step 8: Application Pending
+
+A simple, clean screen: "Thank you, J. We're reviewing your application. A member of our team will be in touch within 24 hours."
+
+Key Design Considerations
+Council Variation: This is the single biggest complexity. The steps for a TfL (London) licence are very different from those for Manchester or a small rural council. Your "Flow 1" must dynamically change the checklist (or at least the links) based on the "Area" they entered in Step 1.
+
+Nurturing Flow 1: The unlicensed flow can take months. You need to use push notifications and emails to keep them engaged (e.g., "Hi J, just checking in. Have you managed to book your medical exam yet?").
+
+Document Security: You are collecting highly sensitive data (Driving Licences, DBS checks). Ensure your app and backend are secure and GDPR compliant.
+
+Save & Continue: A user must be able to save their progress and return later, especially in Flow 2 (they might need to go and find their insurance certificate).

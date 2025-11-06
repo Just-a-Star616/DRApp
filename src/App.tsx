@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './contexts/AppContext';
-import Apply from './pages/Apply';
+import ApplyWizard from './pages/ApplyWizard';
 import Status from './pages/Status';
 import Login from './pages/Login';
 import Home from './pages/Home';
@@ -165,7 +165,7 @@ const App: React.FC = () => {
         <HashRouter>
           <Routes>
             <Route path="/home" element={!isAuthenticated ? <Home /> : <Navigate to="/status" />} />
-            <Route path="/apply" element={!isAuthenticated ? <Apply /> : <Navigate to="/status" />} />
+            <Route path="/apply" element={!isAuthenticated ? <ApplyWizard /> : <Navigate to="/status" />} />
             <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/status" />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
