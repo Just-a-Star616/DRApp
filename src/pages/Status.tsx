@@ -323,16 +323,16 @@ const Status = () => {
 
           {/* Document Upload Section for Unlicensed */}
           <div className="mt-8 p-6 bg-slate-900/50 rounded-lg border border-sky-800">
-            <h2 className="text-lg font-semibold text-white mb-4">Upload Documents</h2>
+            <h2 className="text-lg font-semibold text-white mb-4">Upload Documents (Optional)</h2>
             <p className="text-sm text-slate-400 mb-4">
-              Upload your licensing documents as you receive them. Documents marked with existing uploads will be replaced if you upload a new file.
+              Upload your documents here if available. All documents will be validated by staff before details are entered into the dispatch system. Documents can also be provided via email or in person during face-to-face meetings.
             </p>
 
             <div className="space-y-4">
               {/* DBS Document */}
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  DBS Check Certificate {application.unlicensedProgress?.dbsDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
+                  DBS Check Certificate (Optional) {application.unlicensedProgress?.dbsDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
                 </label>
                 <FileUpload
                   label="Choose DBS Certificate"
@@ -345,7 +345,7 @@ const Status = () => {
               {/* Medical Document */}
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Medical Examination Certificate {application.unlicensedProgress?.medicalDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
+                  Medical Examination Certificate (Optional) {application.unlicensedProgress?.medicalDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
                 </label>
                 <FileUpload
                   label="Choose Medical Certificate"
@@ -358,7 +358,7 @@ const Status = () => {
               {/* Knowledge Test Document */}
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Knowledge & Safeguarding Test Certificate {application.unlicensedProgress?.knowledgeTestDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
+                  Knowledge & Safeguarding Test Certificate (Optional) {application.unlicensedProgress?.knowledgeTestDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
                 </label>
                 <FileUpload
                   label="Choose Test Certificate"
@@ -431,12 +431,15 @@ const Status = () => {
 
                     {/* Vehicle Documents */}
                     <div className="pt-4 border-t border-sky-800">
-                      <h4 className="text-sm font-semibold text-white mb-3">Vehicle Documents</h4>
+                      <h4 className="text-sm font-semibold text-white mb-3">Vehicle Documents (Optional)</h4>
+                      <p className="text-xs text-slate-400 mb-3">
+                        All documents will be validated by staff before being entered into the dispatch system.
+                      </p>
 
                       <div className="space-y-3">
                         <div>
                           <label className="block text-sm font-medium text-slate-300 mb-2">
-                            Insurance Certificate {application.documents?.insuranceDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
+                            Insurance Certificate (Optional) {application.documents?.insuranceDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
                           </label>
                           <FileUpload
                             label="Choose Insurance Certificate"
@@ -570,16 +573,16 @@ const Status = () => {
 
               {/* Document Uploads */}
               <div className="mb-6">
-                <h3 className="text-md font-semibold text-white mb-3">Upload Missing Documents</h3>
+                <h3 className="text-md font-semibold text-white mb-3">Upload Documents (Optional)</h3>
                 <p className="text-sm text-slate-400 mb-4">
-                  Upload any documents you didn't provide during signup. Existing documents will be replaced if you upload a new file.
+                  Upload any documents you didn't provide during signup. All documents will be validated by staff before details are entered into the dispatch system. Documents can also be provided via email or in person during face-to-face meetings.
                 </p>
 
                 <div className="space-y-4">
                   {/* Badge Document */}
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Badge Document {application.documents?.badgeDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
+                      Badge Document (Optional) {application.documents?.badgeDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
                     </label>
                     <FileUpload
                       label="Choose Badge Document"
@@ -592,7 +595,7 @@ const Status = () => {
                   {/* Driving License */}
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Driving License {application.documents?.drivingLicenseDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
+                      Driving License (Optional) {application.documents?.drivingLicenseDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
                     </label>
                     <FileUpload
                       label="Choose Driving License"
@@ -605,7 +608,7 @@ const Status = () => {
                   {/* Insurance Certificate */}
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Insurance Certificate {application.documents?.insuranceDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
+                      Insurance Certificate (Optional) {application.documents?.insuranceDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
                     </label>
                     <FileUpload
                       label="Choose Insurance Certificate"
@@ -705,12 +708,15 @@ const Status = () => {
 
                       {/* Vehicle Documents */}
                       <div className="pt-4 border-t border-sky-800">
-                        <h4 className="text-sm font-semibold text-white mb-3">Vehicle Documents</h4>
+                        <h4 className="text-sm font-semibold text-white mb-3">Vehicle Documents (Optional)</h4>
+                        <p className="text-xs text-slate-400 mb-3">
+                          All documents will be validated by staff before being entered into the dispatch system.
+                        </p>
 
                         <div className="space-y-3">
                           <div>
                             <label className="block text-sm font-medium text-slate-300 mb-2">
-                              Insurance Certificate {application.documents?.insuranceDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
+                              Insurance Certificate (Optional) {application.documents?.insuranceDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
                             </label>
                             <FileUpload
                               label="Choose Insurance Certificate"
