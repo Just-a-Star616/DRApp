@@ -557,3 +557,224 @@ exports.processScheduledNotifications = functions.pubsub
     console.log('Finished processing scheduled notifications');
     return null;
   });
+
+/**
+ * Cloud Function that triggers when a new activity log is created
+ * Sends webhook notifications to staff for important activities
+ */
+exports.notifyStaffOfActivity = functions.firestore
+  .document('activityLogs/{logId}')
+  .onCreate(async (snapshot, context) => {
+    const logId = context.params.logId;
+    const activityLog = snapshot.data();
+
+    // Get the Google Chat webhook URL from environment config
+    const webhookUrl = functions.config().googlechat?.webhook;
+
+    if (!webhookUrl) {
+      console.log('Google Chat webhook URL not configured, skipping notification');
+      return null;
+    }
+
+    // Determine if this activity should trigger a webhook notification
+    // We'll notify staff for all applicant actions and status updates
+    const shouldNotify =
+      activityLog.actor === 'Applicant' ||
+      activityLog.activityType === 'Status Update' ||
+      activityLog.activityType === 'Notification Sent';
+
+    if (!shouldNotify) {
+      console.log('Activity type does not require staff notification:', activityLog.activityType);
+      return null;
+    }
+
+    // Determine icon and color based on activity type
+    let icon = '📋';
+    let color = '#3B82F6'; // blue
+
+    if (activityLog.activityType === 'Document Uploaded by Applicant') {
+      icon = '📄';
+      color = '#10B981'; // green
+    } else if (activityLog.activityType === 'Vehicle Added') {
+      icon = '🚗';
+      color = '#8B5CF6'; // purple
+    } else if (activityLog.activityType === 'DBS Number Added') {
+      icon = '🔐';
+      color = '#F59E0B'; // amber
+    } else if (activityLog.activityType === 'Status Update') {
+      icon = '🔄';
+      color = '#06B6D4'; // cyan
+    } else if (activityLog.activityType === 'Information Updated') {
+      icon = '✏️';
+      color = '#6366F1'; // indigo
+    } else if (activityLog.activityType === 'Unlicensed Progress Updated') {
+      icon = '✅';
+      color = '#14B8A6'; // teal
+    }
+
+    // Format timestamp
+    const timestamp = new Date(activityLog.timestamp);
+    const formattedTime = timestamp.toLocaleString('en-GB', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    // Create Google Chat message
+    const message = {
+      text: `${icon} Activity Log Update`,
+      cardsV2: [{
+        cardId: `activity-${logId}`,
+        card: {
+          header: {
+            title: `${icon} ${activityLog.activityType}`,
+            subtitle: activityLog.applicantName,
+            imageUrl: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+            imageType: "CIRCLE"
+          },
+          sections: [
+            {
+              header: "Activity Details",
+              collapsible: false,
+              widgets: [
+                {
+                  decoratedText: {
+                    topLabel: "Applicant",
+                    text: `${activityLog.applicantName} (${activityLog.applicantEmail})`,
+                    startIcon: {
+                      knownIcon: "PERSON"
+                    }
+                  }
+                },
+                {
+                  decoratedText: {
+                    topLabel: "Action",
+                    text: activityLog.details,
+                    startIcon: {
+                      knownIcon: "DESCRIPTION"
+                    }
+                  }
+                },
+                {
+                  decoratedText: {
+                    topLabel: "Performed By",
+                    text: `${activityLog.actorName} (${activityLog.actor})`,
+                    startIcon: {
+                      knownIcon: "PERSON"
+                    }
+                  }
+                },
+                {
+                  decoratedText: {
+                    topLabel: "Time",
+                    text: formattedTime,
+                    startIcon: {
+                      knownIcon: "CLOCK"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }]
+    };
+
+    // Add metadata section if present
+    if (activityLog.metadata && Object.keys(activityLog.metadata).length > 0) {
+      const metadataWidgets = [];
+
+      // Document uploads - show document types
+      if (activityLog.metadata.documentType) {
+        metadataWidgets.push({
+          decoratedText: {
+            topLabel: "Documents",
+            text: activityLog.metadata.documentType
+          }
+        });
+      }
+
+      // Status updates - show old and new values
+      if (activityLog.metadata.oldValue && activityLog.metadata.newValue) {
+        metadataWidgets.push({
+          decoratedText: {
+            topLabel: "Change",
+            text: `${activityLog.metadata.oldValue} → ${activityLog.metadata.newValue}`
+          }
+        });
+      }
+
+      // Vehicle details
+      if (activityLog.metadata.vehicleMake && activityLog.metadata.vehicleModel) {
+        metadataWidgets.push({
+          decoratedText: {
+            topLabel: "Vehicle",
+            text: `${activityLog.metadata.vehicleMake} ${activityLog.metadata.vehicleModel} (${activityLog.metadata.vehicleReg || 'N/A'})`
+          }
+        });
+      }
+
+      // DBS number (partially masked for security)
+      if (activityLog.metadata.dbsCheckNumber) {
+        const maskedDBS = activityLog.metadata.dbsCheckNumber.substring(0, 4) + '****';
+        metadataWidgets.push({
+          decoratedText: {
+            topLabel: "DBS Check Number",
+            text: maskedDBS
+          }
+        });
+      }
+
+      if (metadataWidgets.length > 0) {
+        message.cardsV2[0].card.sections.push({
+          header: "Additional Information",
+          collapsible: true,
+          widgets: metadataWidgets
+        });
+      }
+    }
+
+    // Add action button to view application
+    message.cardsV2[0].card.sections.push({
+      widgets: [
+        {
+          buttonList: {
+            buttons: [
+              {
+                text: "View Application",
+                onClick: {
+                  openLink: {
+                    url: `https://console.firebase.google.com/project/drapp-426/firestore/data/applications/${activityLog.applicationId}`
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    });
+
+    // Send the notification to Google Chat
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=UTF-8'
+        },
+        body: JSON.stringify(message)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      console.log('Successfully sent activity notification to Google Chat');
+      return null;
+    } catch (error) {
+      console.error('Error sending activity notification to Google Chat:', error);
+      // Don't throw - we don't want activity logging to fail if webhook fails
+      return null;
+    }
+  });

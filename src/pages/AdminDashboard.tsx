@@ -7,6 +7,9 @@ import { Application, ApplicationStatus } from '../types';
 import { useAppContext } from '../contexts/AppContext';
 import Button from '../components/Button';
 import SendNotificationModal from '../components/SendNotificationModal';
+import ActivityLogViewer from '../components/ActivityLogViewer';
+import { logActivity } from '../services/activityLog';
+import { ActivityType, ActivityActor } from '../types';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -80,10 +83,34 @@ const AdminDashboard: React.FC = () => {
   const handleStatusUpdate = async (applicationId: string, newStatus: ApplicationStatus) => {
     setIsUpdating(true);
     try {
+      const application = applications.find(app => app.id === applicationId);
+      if (!application) return;
+
+      const oldStatus = application.status;
+
       await updateDoc(doc(db, 'applications', applicationId), {
         status: newStatus,
         updatedAt: Date.now()
       });
+
+      // Log the status update activity
+      if (auth.currentUser) {
+        await logActivity({
+          applicationId,
+          applicantName: `${application.firstName} ${application.lastName}`,
+          applicantEmail: application.email,
+          activityType: ActivityType.StatusUpdate,
+          actor: ActivityActor.Staff,
+          actorId: auth.currentUser.uid,
+          actorName: auth.currentUser.email || 'Admin Staff',
+          details: `Status updated from "${oldStatus}" to "${newStatus}"`,
+          metadata: {
+            oldValue: oldStatus,
+            newValue: newStatus,
+          },
+        });
+      }
+
       setSelectedApplication(null);
     } catch (error) {
       console.error('Error updating status:', error);
@@ -292,6 +319,11 @@ const AdminDashboard: React.FC = () => {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* Recent Activity Section */}
+        <div className="mt-8 bg-slate-900/50 p-6 rounded-lg border border-sky-800">
+          <ActivityLogViewer limit={15} />
         </div>
       </div>
 
@@ -724,6 +756,11 @@ const AdminDashboard: React.FC = () => {
                 {isUpdating && (
                   <p className="mt-2 text-sm text-cyan-400">Updating status and sending notification...</p>
                 )}
+              </div>
+
+              {/* Activity Log */}
+              <div className="mb-6 p-4 bg-slate-800/50 rounded-lg">
+                <ActivityLogViewer applicationId={selectedApplication.id} limit={20} />
               </div>
 
               <div className="flex justify-end">

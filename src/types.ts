@@ -76,3 +76,45 @@ export enum ApplicationStatus {
   Approved = 'Approved',
   Rejected = 'Rejected',
 }
+
+// Activity Log Types
+export enum ActivityType {
+  // Staff actions
+  StatusUpdate = 'Status Update',
+  NotificationSent = 'Notification Sent',
+  DocumentUploadedByStaff = 'Document Uploaded by Staff',
+
+  // Applicant actions
+  ApplicationSubmitted = 'Application Submitted',
+  DocumentUploadedByApplicant = 'Document Uploaded by Applicant',
+  InformationUpdated = 'Information Updated',
+  VehicleAdded = 'Vehicle Added',
+  DBSNumberAdded = 'DBS Number Added',
+  UnlicensedProgressUpdated = 'Unlicensed Progress Updated',
+}
+
+export enum ActivityActor {
+  Staff = 'Staff',
+  Applicant = 'Applicant',
+  System = 'System',
+}
+
+export interface ActivityLog {
+  id: string; // Auto-generated document ID
+  applicationId: string; // UID of the application this activity relates to
+  applicantName: string; // Full name for easy display
+  applicantEmail: string; // Email for easy display
+  timestamp: number; // Unix timestamp
+  activityType: ActivityType;
+  actor: ActivityActor;
+  actorId: string; // UID of staff member or applicant
+  actorName: string; // Name of person who performed action
+  details: string; // Human-readable description of what happened
+  metadata?: {
+    oldValue?: string; // For updates, what was the old value
+    newValue?: string; // For updates, what is the new value
+    documentType?: string; // For document uploads, what type of document
+    notificationTitle?: string; // For notifications, the title
+    [key: string]: any; // Allow additional metadata
+  };
+}

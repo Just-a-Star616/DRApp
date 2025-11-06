@@ -153,6 +153,50 @@ Tracks administrative progress (separate from licensing progress for unlicensed)
 **BrandingConfig Interface**:
 - companyName, logoUrl, primaryColor, tagline (optional)
 
+**ActivityLog Interface**:
+- Comprehensive tracking of all actions performed by staff and applicants
+- Fields: id, applicationId, applicantName, applicantEmail, timestamp
+- activityType: Enum defining the type of activity (Status Update, Document Upload, etc.)
+- actor: Enum specifying who performed the action (Staff, Applicant, System)
+- actorId, actorName: Identity of the person who performed the action
+- details: Human-readable description of the activity
+- metadata: Optional object containing additional context (old/new values, document types, etc.)
+
+### Activity Logging System
+The application includes comprehensive activity logging to track all actions by staff and applicants:
+
+**Logged Activities**:
+- **Staff actions**: Status updates, notification sending, document uploads (when implemented)
+- **Applicant actions**: Document uploads, information updates, vehicle additions, DBS number additions
+
+**Implementation** (`src/services/activityLog.ts`):
+- `logActivity()`: Central function to create activity log entries in Firestore
+- `getApplicationActivityLogs()`: Retrieve logs for a specific application
+- `getAllActivityLogs()`: Retrieve recent logs across all applications (for admin dashboard)
+
+**Automatic Logging**:
+- Status page (`src/pages/Status.tsx`): Logs all applicant actions when saving changes
+  - Document uploads tracked with document types and counts
+  - Vehicle additions tracked with vehicle details
+  - DBS number additions logged for staff validation
+- Admin dashboard (`src/pages/AdminDashboard.tsx`): Logs staff actions
+  - Status updates logged with old/new values
+  - Notifications logged with title and recipient details
+- All logs immutable once created (Firestore rules prevent updates/deletes)
+
+**Activity Log Viewer** (`src/components/ActivityLogViewer.tsx`):
+- Displays activity history with visual indicators and badges
+- Shows in AdminDashboard main view (recent activity across all applications)
+- Shows in application detail modal (activity for specific applicant)
+- Real-time relative timestamps ("5m ago", "2h ago", etc.)
+- Color-coded by actor type (Staff, Applicant, System)
+
+**Webhook Notifications**:
+- Cloud Function `notifyStaffOfActivity` sends Google Chat notifications for important activities
+- Triggered automatically when new activity logs are created
+- Notifies staff of applicant actions (document uploads, vehicle additions, etc.)
+- Includes activity details, metadata, and link to Firebase Console
+
 ### Firebase Cloud Functions
 Located in `functions/index.js`:
 
@@ -173,6 +217,12 @@ Located in `functions/index.js`:
 
 **processScheduledNotifications**: Scheduled function (runs every minute) to send scheduled notifications
 - Processes notifications stored in `scheduledNotifications` collection
+
+**notifyStaffOfActivity**: Firestore trigger that sends Google Chat webhook notifications when activity logs are created
+- Triggers on new activity log creation in `activityLogs` collection
+- Sends notifications to staff for important activities (applicant actions, status updates)
+- Includes activity details, metadata, and link to view application
+- Uses same `googlechat.webhook` environment config as `notifyNewApplication`
 
 ### Service Worker
 - Implementation in `service-worker.js` at project root
@@ -223,6 +273,11 @@ Update `src/services/firebase.ts` with Firebase project credentials before deplo
 - `admins`: Documents keyed by admin UID for admin access control
 - `fcmTokens`: Stores FCM tokens for push notifications (keyed by user UID)
 - `scheduledNotifications`: Stores scheduled notifications for later delivery
+- `activityLogs`: Comprehensive activity tracking for all staff and applicant actions
+  - Auto-created when activities are logged via `logActivity()` service
+  - Contains ActivityLog documents with activity type, actor, details, and metadata
+  - Indexed by timestamp for efficient querying
+  - Immutable once created (Firestore rules prevent updates/deletes)
 
 **Firebase Functions Config:**
 ```bash

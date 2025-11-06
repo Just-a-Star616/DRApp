@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Application } from '../types';
 import Button from './Button';
 import TextInput from './TextInput';
+import { logActivity } from '../services/activityLog';
+import { ActivityType, ActivityActor } from '../types';
+import { auth } from '../services/firebase';
 
 interface SendNotificationModalProps {
   isOpen: boolean;
@@ -110,6 +113,32 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
       }
 
       const result = await response.json();
+
+      // Log notification activity for each recipient
+      if (auth.currentUser) {
+        const recipientApps = applications.filter(app => recipients.includes(app.id));
+
+        for (const app of recipientApps) {
+          await logActivity({
+            applicationId: app.id,
+            applicantName: `${app.firstName} ${app.lastName}`,
+            applicantEmail: app.email,
+            activityType: ActivityType.NotificationSent,
+            actor: ActivityActor.Staff,
+            actorId: auth.currentUser.uid,
+            actorName: auth.currentUser.email || 'Admin Staff',
+            details: sendMode === 'now'
+              ? `Sent notification: "${title}"`
+              : `Scheduled notification for ${new Date(scheduledFor!).toLocaleString()}: "${title}"`,
+            metadata: {
+              notificationTitle: title,
+              notificationMessage: message,
+              sendMode,
+              scheduledFor: scheduledFor || undefined,
+            },
+          });
+        }
+      }
 
       if (sendMode === 'now') {
         setSuccess(`Notification sent successfully to ${recipients.length} applicant(s)!`);

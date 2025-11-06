@@ -11,6 +11,8 @@ import { auth, db, storage } from '../services/firebase';
 import { signOut } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { logActivity } from '../services/activityLog';
+import { ActivityType, ActivityActor } from '../types';
 
 const InfoRow: React.FC<{ label: string, value?: string, children?: React.ReactNode }> = ({ label, value, children }) => {
     if (!value && !children) return null;
@@ -69,60 +71,142 @@ const Status = () => {
 
     try {
       const updates: any = {};
+      const uploadedDocuments: string[] = [];
+      const applicantName = `${application.firstName} ${application.lastName}`;
 
       // Upload files if provided
       if (badgeFile) {
         const url = await handleFileUpload(badgeFile, 'badge');
         updates['documents.badgeDocumentUrl'] = url;
+        uploadedDocuments.push('Badge Document');
       }
       if (licenseFile) {
         const url = await handleFileUpload(licenseFile, 'license');
         updates['documents.drivingLicenseDocumentUrl'] = url;
+        uploadedDocuments.push('Driving License');
       }
       if (insuranceFile) {
         const url = await handleFileUpload(insuranceFile, 'insurance');
         updates['documents.insuranceDocumentUrl'] = url;
+        uploadedDocuments.push('Insurance Certificate');
       }
       if (v5cFile) {
         const url = await handleFileUpload(v5cFile, 'v5c');
         updates['documents.v5cDocumentUrl'] = url;
+        uploadedDocuments.push('V5C Logbook');
       }
       if (phvFile) {
         const url = await handleFileUpload(phvFile, 'phv');
         updates['documents.phvLicenceDocumentUrl'] = url;
+        uploadedDocuments.push('PHV Licence');
       }
 
       // Unlicensed driver documents
       if (dbsFile) {
         const url = await handleFileUpload(dbsFile, 'dbs');
         updates['unlicensedProgress.dbsDocumentUrl'] = url;
+        uploadedDocuments.push('DBS Certificate');
       }
       if (medicalFile) {
         const url = await handleFileUpload(medicalFile, 'medical');
         updates['unlicensedProgress.medicalDocumentUrl'] = url;
+        uploadedDocuments.push('Medical Certificate');
       }
       if (knowledgeTestFile) {
         const url = await handleFileUpload(knowledgeTestFile, 'knowledge');
         updates['unlicensedProgress.knowledgeTestDocumentUrl'] = url;
+        uploadedDocuments.push('Knowledge Test Certificate');
       }
 
       // Add text fields
+      let dbsNumberAdded = false;
       if (dbsCheckNumber && dbsCheckNumber !== application.dbsCheckNumber) {
         updates.dbsCheckNumber = dbsCheckNumber;
+        dbsNumberAdded = true;
       }
 
       // Vehicle details if adding vehicle
+      let vehicleAdded = false;
       if (showVehicleForm || (vehicleMake && vehicleModel)) {
         if (vehicleMake) updates.vehicleMake = vehicleMake;
         if (vehicleModel) updates.vehicleModel = vehicleModel;
         if (vehicleReg) updates.vehicleReg = vehicleReg;
         if (insuranceExpiry) updates.insuranceExpiry = insuranceExpiry;
         updates.hasOwnVehicle = true;
+        vehicleAdded = true;
       }
 
       if (Object.keys(updates).length > 0) {
         await updateDoc(doc(db, 'applications', currentUser.uid), updates);
         setUploadMessage('Changes saved successfully!');
+
+        // Log activities
+        if (uploadedDocuments.length > 0) {
+          await logActivity({
+            applicationId: currentUser.uid,
+            applicantName,
+            applicantEmail: application.email,
+            activityType: ActivityType.DocumentUploadedByApplicant,
+            actor: ActivityActor.Applicant,
+            actorId: currentUser.uid,
+            actorName: applicantName,
+            details: `Uploaded ${uploadedDocuments.length} document(s): ${uploadedDocuments.join(', ')}`,
+            metadata: {
+              documentType: uploadedDocuments.join(', '),
+              documentCount: uploadedDocuments.length,
+            },
+          });
+        }
+
+        if (dbsNumberAdded) {
+          await logActivity({
+            applicationId: currentUser.uid,
+            applicantName,
+            applicantEmail: application.email,
+            activityType: ActivityType.DBSNumberAdded,
+            actor: ActivityActor.Applicant,
+            actorId: currentUser.uid,
+            actorName: applicantName,
+            details: 'Added DBS check number for validation',
+            metadata: {
+              dbsCheckNumber: dbsCheckNumber,
+            },
+          });
+        }
+
+        if (vehicleAdded) {
+          await logActivity({
+            applicationId: currentUser.uid,
+            applicantName,
+            applicantEmail: application.email,
+            activityType: ActivityType.VehicleAdded,
+            actor: ActivityActor.Applicant,
+            actorId: currentUser.uid,
+            actorName: applicantName,
+            details: `Added vehicle: ${vehicleMake || ''} ${vehicleModel || ''} (${vehicleReg || 'N/A'})`,
+            metadata: {
+              vehicleMake,
+              vehicleModel,
+              vehicleReg,
+              insuranceExpiry,
+            },
+          });
+        }
+
+        // If no specific activity type but other fields updated, log general update
+        if (uploadedDocuments.length === 0 && !dbsNumberAdded && !vehicleAdded) {
+          await logActivity({
+            applicationId: currentUser.uid,
+            applicantName,
+            applicantEmail: application.email,
+            activityType: ActivityType.InformationUpdated,
+            actor: ActivityActor.Applicant,
+            actorId: currentUser.uid,
+            actorName: applicantName,
+            details: 'Updated application information',
+            metadata: updates,
+          });
+        }
 
         // Clear file inputs
         setBadgeFile(null);
