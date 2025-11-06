@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a white-label, mobile-first driver recruitment application built with React, TypeScript, Vite, and Firebase. It allows applicants to submit driver applications, upload documents, track application status, and includes authentication with password reset flows. The app includes an admin dashboard for managing applications and sending notifications.
+This is a white-label, mobile-first driver recruitment application built with React, TypeScript, Vite, and Firebase. It supports two distinct applicant journeys:
+- **Licensed drivers**: Already have taxi/PHV license - submit details, documents, and vehicle information
+- **Unlicensed drivers**: Working towards license - track 5-step licensing progress with document uploads
+
+The application includes real-time application tracking, optional document uploads (staff validation before dispatch system entry), vehicle management, and an admin dashboard for managing applications and sending notifications.
 
 ## Development Commands
 
@@ -41,15 +45,40 @@ firebase deploy  # Deploy everything
 - Authentication state managed in `App.tsx` via `onAuthStateChanged`
 - `isAuthenticated` = logged in AND not anonymous
 
+### Application Flow
+The application supports two distinct user journeys:
+
+**Licensed Driver Flow** (src/pages/ApplyWizard.tsx):
+- 7-step wizard for drivers with existing taxi/PHV licenses
+- Step 1: Personal details + license status check
+- Step 2: Badge details (number, expiry, issuing council)
+- Step 3: Driving license details
+- Step 4: Document uploads (badge, license, insurance - all optional)
+- Step 5: Vehicle ownership question (own vehicle vs fleet)
+- Step 6: Vehicle details (conditional - only if own vehicle)
+- Step 7: Review and submit
+- All documents optional - validated by staff before dispatch system entry
+
+**Unlicensed Driver Flow** (initially via ApplyWizard, then Status page):
+- Initial signup captures basic details
+- Status page (`src/pages/Status.tsx`) shows 5-step licensing checklist:
+  1. Eligibility Check
+  2. Enhanced DBS Check (with optional document upload)
+  3. Medical Examination (with optional document upload)
+  4. Knowledge & Safeguarding Test (with optional certificate upload)
+  5. Council Application Submitted
+- Progress tracked with visual indicators and percentage completion
+- Can add vehicle details later if purchased after initial "fleet vehicle" selection
+
 ### Application State Management
 - **Real-time sync**: Application data stored in Firestore (`applications` collection, keyed by user UID)
-- **Auto-save**: Partial applications auto-saved every 1.5s while user types (debounced in `src/pages/Apply.tsx:111-118`)
+- **Multi-step wizard**: Licensed drivers use `ApplyWizard.tsx` with step tracking via `currentStep` field
 - **Context**: Global state via `AppContext` defined in `src/contexts/AppContext.tsx`
   - Provides: `branding`, `statusSteps`, `application`, `isAuthenticated`, `currentUser`
-  - Computed in `src/App.tsx:136-148` using `useMemo`
+  - Computed in `src/App.tsx` using `useMemo`
 - **Firestore listeners**: Real-time updates using `onSnapshot` in `src/App.tsx`
-  - Branding loaded via `getDocFromServer` (bypasses cache) on mount (line 29-54)
-  - Application synced in real-time per user (line 92-117)
+  - Branding loaded via `getDocFromServer` (bypasses cache) on mount
+  - Application synced in real-time per user
 
 ### White-Label Configuration
 - Branding and status steps stored in Firestore `configs` collection (default document: `defaultConfig`)
@@ -58,10 +87,27 @@ firebase deploy  # Deploy everything
 - Branding cache issue: Uses server fetch to ensure latest branding is always loaded
 
 ### Document Upload Flow
-1. Files selected via `FileUpload` component
-2. Uploaded to Firebase Storage in `src/pages/Apply.tsx` submission handler
-3. Download URLs stored in Firestore application document under `documents` field
-4. File naming pattern: `{timestamp}-{originalName}`
+**All documents are optional** - applicants can provide via platform, email, or in-person at face-to-face meetings. Staff validate all documents before entering details into dispatch system.
+
+**Initial Upload (ApplyWizard.tsx)**:
+1. Files selected via `FileUpload` component during application wizard
+2. Uploaded to Firebase Storage on form submission
+3. Download URLs stored in Firestore `documents` field
+
+**Post-Submission Upload (Status.tsx)**:
+1. Both licensed and unlicensed applicants can upload/update documents after submission
+2. Upload handler in `Status.tsx:handleSaveChanges()` processes multiple files
+3. Supports uploading:
+   - Badge documents
+   - Driving license
+   - Insurance certificate
+   - V5C logbook (optional)
+   - PHV licence (optional)
+   - DBS certificate (unlicensed)
+   - Medical examination certificate (unlicensed)
+   - Knowledge test certificate (unlicensed)
+4. File naming pattern: `documents/{userId}/{timestamp}-{fileName}`
+5. Real-time visibility to staff in AdminDashboard
 
 ### Routing
 - Uses `HashRouter` for compatibility with static hosting
@@ -76,9 +122,36 @@ firebase deploy  # Deploy everything
 
 ### Data Model
 Key types in `src/types.ts`:
-- `Application`: Contains all applicant data, documents, status, and partial flag
-- `ApplicationStatus`: Enum for tracking stages (Submitted, Under Review, Contacted, Meeting Scheduled, Approved, Rejected)
-- `BrandingConfig`: White-label configuration (company name, logo, primary color)
+
+**Application Interface**:
+- Personal details: firstName, lastName, email, phone, area
+- License status: `isLicensedDriver` (boolean)
+- Licensed driver fields:
+  - Badge: badgeNumber, badgeExpiry, issuingCouncil
+  - Driving license: drivingLicenseNumber, licenseExpiry
+  - DBS: dbsCheckNumber (optional, for validation by staff)
+- Unlicensed driver fields:
+  - `unlicensedProgress`: Object tracking 5-step licensing journey
+    - eligibilityChecked, dbsApplied, medicalBooked, knowledgeTestPassed, councilApplicationSubmitted
+    - Document URLs: dbsDocumentUrl, medicalDocumentUrl, knowledgeTestDocumentUrl
+- Vehicle ownership:
+  - `hasOwnVehicle`: true (own), false (fleet), undefined (not specified)
+  - vehicleMake, vehicleModel, vehicleReg, insuranceExpiry
+- Documents object:
+  - badgeDocumentUrl, drivingLicenseDocumentUrl, insuranceDocumentUrl
+  - v5cDocumentUrl (optional), phvLicenceDocumentUrl (optional)
+- Application tracking:
+  - status: ApplicationStatus enum
+  - currentStep: wizard step number (for licensed flow)
+  - isPartial: boolean flag for incomplete applications
+  - createdAt: timestamp
+
+**ApplicationStatus Enum**:
+Tracks administrative progress (separate from licensing progress for unlicensed):
+- Submitted, Under Review, Contacted, Meeting Scheduled, Approved, Rejected
+
+**BrandingConfig Interface**:
+- companyName, logoUrl, primaryColor, tagline (optional)
 
 ### Firebase Cloud Functions
 Located in `functions/index.js`:
@@ -128,6 +201,11 @@ Located in `functions/index.js`:
 - `functions/check-config.js`: Validates Firebase Functions configuration
 - `functions/update-config.js`: Updates Firebase Functions configuration
 
+**Reference Data:**
+- `Licence Issuing Authorities.txt`: Complete list of 359 UK licensing authorities
+  - Used in ApplyWizard.tsx for "Issuing Council" dropdown
+  - Includes all UK councils that issue taxi/PHV licenses
+
 ## Firebase Setup Requirements
 
 **Project Configuration:**
@@ -163,10 +241,20 @@ firebase functions:config:set googlechat.webhook="https://chat.googleapis.com/v1
 - Validation enforced before submission in `Apply.tsx`
 
 **Form State Persistence:**
-- Partial applications saved with `isPartial: true` flag in `src/pages/Apply.tsx:89-109`
-- Passwords never saved in partial applications (deleted from partialData object)
-- Existing partial data pre-fills form on mount (`src/pages/Apply.tsx:78-87`)
-- Auto-save triggers 1.5s after user stops typing (debounced)
+- Multi-step wizard tracks progress via `currentStep` field in Firestore
+- Passwords never saved in Firestore (excluded when pre-filling form data)
+- Step validation ensures data integrity before progression
+- Vehicle ownership decision impacts form flow (step 6 conditional on hasOwnVehicle)
+
+**Vehicle Management:**
+- Applicants can initially select "Own Vehicle" or "Fleet Vehicle"
+- Those who select "Fleet Vehicle" can later add their own vehicle via Status page
+- When adding vehicle, applicants provide:
+  - Vehicle make, model, registration
+  - Insurance expiry date
+  - Optional documents: Insurance certificate, V5C logbook, PHV licence
+- Vehicle details visible to staff in AdminDashboard for validation
+- Supports transition from fleet to owned vehicle mid-process
 
 **File Upload Pattern:**
 - Files stored temporarily in component state
@@ -174,8 +262,28 @@ firebase functions:config:set googlechat.webhook="https://chat.googleapis.com/v1
 - Upload path: `documents/{userId}/{timestamp}-{fileName}`
 - Download URLs stored in application document's `documents` field
 
-**Admin Features:**
-- Admin dashboard at `/admin/dashboard` for managing applications
-- Change application status, view applicant details, and upload documents
-- Send custom notifications to one or multiple applicants
-- Schedule notifications for later delivery
+**Admin Features (src/pages/AdminDashboard.tsx):**
+- Comprehensive application management at `/admin/dashboard`
+- **View all applicant details**:
+  - Licensed drivers: Badge details, driving license, DBS number, vehicle ownership, vehicle details (if provided), all documents
+  - Unlicensed drivers: 5-step licensing progress with visual indicators, vehicle details (if added), licensing documents
+- **Status management**: Change application status (Submitted → Under Review → Contacted → Meeting Scheduled → Approved/Rejected)
+- **Notifications**:
+  - Send custom notifications to individual or multiple applicants
+  - Schedule notifications for later delivery
+  - Status change notifications sent automatically via FCM
+- **Complete field visibility**: All fields and documents visible to staff for validation before dispatch system entry
+- **Real-time updates**: Application list updates in real-time via Firestore listeners
+
+**Applicant Status Page (src/pages/Status.tsx):**
+- **Licensed drivers**:
+  - View submitted application details
+  - Upload/update missing documents (badge, license, insurance, V5C, PHV)
+  - Add DBS check number for staff validation
+  - Add vehicle details if initially selected "fleet vehicle"
+- **Unlicensed drivers**:
+  - Track 5-step licensing progress with visual checklist
+  - Upload licensing documents as received (DBS, medical, knowledge test)
+  - Add vehicle details if initially selected "fleet vehicle"
+  - View personal information
+- All document uploads optional with clear messaging about staff validation
