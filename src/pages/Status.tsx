@@ -428,6 +428,49 @@ const Status = () => {
                         className="w-full px-4 py-2 rounded-lg bg-slate-800 text-white border border-slate-600 focus:border-cyan-500 focus:ring-cyan-500"
                       />
                     </div>
+
+                    {/* Vehicle Documents */}
+                    <div className="pt-4 border-t border-sky-800">
+                      <h4 className="text-sm font-semibold text-white mb-3">Vehicle Documents</h4>
+
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-2">
+                            Insurance Certificate {application.documents?.insuranceDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
+                          </label>
+                          <FileUpload
+                            label="Choose Insurance Certificate"
+                            id="insurance-vehicle-upload"
+                            file={insuranceFile}
+                            onFileChange={setInsuranceFile}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-2">
+                            V5C Logbook (Optional) {application.documents?.v5cDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
+                          </label>
+                          <FileUpload
+                            label="Choose V5C Logbook"
+                            id="v5c-vehicle-upload"
+                            file={v5cFile}
+                            onFileChange={setV5cFile}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-2">
+                            PHV Licence (Optional) {application.documents?.phvLicenceDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
+                          </label>
+                          <FileUpload
+                            label="Choose PHV Licence"
+                            id="phv-vehicle-upload"
+                            file={phvFile}
+                            onFileChange={setPhvFile}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -658,6 +701,49 @@ const Status = () => {
                           onChange={(e) => setInsuranceExpiry(e.target.value)}
                           className="w-full px-4 py-2 rounded-lg bg-slate-800 text-white border border-slate-600 focus:border-cyan-500 focus:ring-cyan-500"
                         />
+                      </div>
+
+                      {/* Vehicle Documents */}
+                      <div className="pt-4 border-t border-sky-800">
+                        <h4 className="text-sm font-semibold text-white mb-3">Vehicle Documents</h4>
+
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">
+                              Insurance Certificate {application.documents?.insuranceDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
+                            </label>
+                            <FileUpload
+                              label="Choose Insurance Certificate"
+                              id="insurance-vehicle-licensed-upload"
+                              file={insuranceFile}
+                              onFileChange={setInsuranceFile}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">
+                              V5C Logbook (Optional) {application.documents?.v5cDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
+                            </label>
+                            <FileUpload
+                              label="Choose V5C Logbook"
+                              id="v5c-vehicle-licensed-upload"
+                              file={v5cFile}
+                              onFileChange={setV5cFile}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">
+                              PHV Licence (Optional) {application.documents?.phvLicenceDocumentUrl && <span className="text-green-400">(Uploaded ✓)</span>}
+                            </label>
+                            <FileUpload
+                              label="Choose PHV Licence"
+                              id="phv-vehicle-licensed-upload"
+                              file={phvFile}
+                              onFileChange={setPhvFile}
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
