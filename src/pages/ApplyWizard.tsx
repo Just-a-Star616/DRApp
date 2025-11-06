@@ -89,9 +89,14 @@ const ApplyWizard: React.FC = () => {
   // Pre-fill form if a partial application exists
   useEffect(() => {
     if (application && !hasLoadedInitialData.current) {
+      // Don't overwrite password fields from stored application
+      const { password, confirmPassword, ...applicationData } = application as any;
+
       setFormData(prev => ({
         ...prev,
-        ...application,
+        ...applicationData,
+        password: '',
+        confirmPassword: '',
         hasOwnVehicle: application.hasOwnVehicle ?? false,
       }));
 
