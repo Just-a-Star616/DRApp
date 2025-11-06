@@ -7,7 +7,10 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
-  "storage": {
-    "rules": "storage.rules"
-  }
+  "storage": [
+    {
+      "bucket": "drapp-426.firebasestorage.app",
+      "rules": "storage.rules"
+    }
+  ]
 }
