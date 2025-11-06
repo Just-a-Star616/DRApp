@@ -499,6 +499,82 @@ const AdminDashboard: React.FC = () => {
                 </div>
               )}
 
+              {/* Vehicle Details for Unlicensed Drivers (if they've added a vehicle) */}
+              {!selectedApplication.isLicensedDriver && (selectedApplication.vehicleMake || selectedApplication.hasOwnVehicle !== undefined) && (
+                <div className="mb-6 p-4 bg-slate-800/50 rounded-lg">
+                  <h3 className="font-semibold text-white mb-3">Vehicle Information</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="col-span-2">
+                      <span className="text-slate-400">Vehicle Ownership:</span>
+                      <span className="ml-2 text-white">
+                        {selectedApplication.hasOwnVehicle === true ? 'Own Vehicle' : selectedApplication.hasOwnVehicle === false ? 'Fleet Vehicle' : 'Not Specified'}
+                      </span>
+                    </div>
+                    {selectedApplication.vehicleMake && selectedApplication.vehicleModel && (
+                      <>
+                        <div>
+                          <span className="text-slate-400">Vehicle Make:</span>
+                          <span className="ml-2 text-white">{selectedApplication.vehicleMake}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400">Vehicle Model:</span>
+                          <span className="ml-2 text-white">{selectedApplication.vehicleModel}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400">Vehicle Registration:</span>
+                          <span className="ml-2 text-white">{selectedApplication.vehicleReg || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400">Insurance Expiry:</span>
+                          <span className="ml-2 text-white">{selectedApplication.insuranceExpiry || 'N/A'}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Vehicle Documents for Unlicensed */}
+                  {(selectedApplication.documents?.insuranceDocumentUrl ||
+                    selectedApplication.documents?.v5cDocumentUrl ||
+                    selectedApplication.documents?.phvLicenceDocumentUrl) && (
+                    <div className="mt-4">
+                      <h4 className="text-sm font-medium text-slate-300 mb-2">Vehicle Documents:</h4>
+                      <div className="flex gap-2 flex-wrap">
+                        {selectedApplication.documents.insuranceDocumentUrl && (
+                          <a
+                            href={selectedApplication.documents.insuranceDocumentUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1 bg-cyan-900/50 text-cyan-300 rounded text-xs hover:bg-cyan-800/50"
+                          >
+                            Insurance Certificate
+                          </a>
+                        )}
+                        {selectedApplication.documents.v5cDocumentUrl && (
+                          <a
+                            href={selectedApplication.documents.v5cDocumentUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1 bg-cyan-900/50 text-cyan-300 rounded text-xs hover:bg-cyan-800/50"
+                          >
+                            V5C Logbook
+                          </a>
+                        )}
+                        {selectedApplication.documents.phvLicenceDocumentUrl && (
+                          <a
+                            href={selectedApplication.documents.phvLicenceDocumentUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1 bg-cyan-900/50 text-cyan-300 rounded text-xs hover:bg-cyan-800/50"
+                          >
+                            PHV Licence
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* License Details */}
               {selectedApplication.isLicensedDriver && (
                 <div className="mb-6 p-4 bg-slate-800/50 rounded-lg">
@@ -513,27 +589,47 @@ const AdminDashboard: React.FC = () => {
                       <span className="ml-2 text-white">{selectedApplication.badgeExpiry || 'N/A'}</span>
                     </div>
                     <div>
-                      <span className="text-slate-400">Council:</span>
+                      <span className="text-slate-400">Issuing Council:</span>
                       <span className="ml-2 text-white">{selectedApplication.issuingCouncil || 'N/A'}</span>
                     </div>
                     <div>
-                      <span className="text-slate-400">License Number:</span>
+                      <span className="text-slate-400">Driving License No.:</span>
                       <span className="ml-2 text-white">{selectedApplication.drivingLicenseNumber || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">License Expiry:</span>
+                      <span className="ml-2 text-white">{selectedApplication.licenseExpiry || 'N/A'}</span>
                     </div>
                     <div>
                       <span className="text-slate-400">DBS Check Number:</span>
                       <span className="ml-2 text-white">{selectedApplication.dbsCheckNumber || 'N/A'}</span>
                     </div>
-                    <div>
-                      <span className="text-slate-400">Vehicle:</span>
+                    <div className="col-span-2">
+                      <span className="text-slate-400">Vehicle Ownership:</span>
                       <span className="ml-2 text-white">
-                        {selectedApplication.vehicleMake} {selectedApplication.vehicleModel} ({selectedApplication.vehicleReg || 'N/A'})
+                        {selectedApplication.hasOwnVehicle === true ? 'Own Vehicle' : selectedApplication.hasOwnVehicle === false ? 'Fleet Vehicle' : 'Not Specified'}
                       </span>
                     </div>
-                    <div>
-                      <span className="text-slate-400">Insurance Expiry:</span>
-                      <span className="ml-2 text-white">{selectedApplication.insuranceExpiry || 'N/A'}</span>
-                    </div>
+                    {selectedApplication.vehicleMake && selectedApplication.vehicleModel && (
+                      <>
+                        <div>
+                          <span className="text-slate-400">Vehicle Make:</span>
+                          <span className="ml-2 text-white">{selectedApplication.vehicleMake}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400">Vehicle Model:</span>
+                          <span className="ml-2 text-white">{selectedApplication.vehicleModel}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400">Vehicle Registration:</span>
+                          <span className="ml-2 text-white">{selectedApplication.vehicleReg || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400">Insurance Expiry:</span>
+                          <span className="ml-2 text-white">{selectedApplication.insuranceExpiry || 'N/A'}</span>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Documents */}
