@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global branding color variables */
+:root {
+  --brand-primary: #0ea5e9;
+  --brand-secondary: #0c4a6e;
+  --brand-accent: #06b6d4;
+  --brand-background: #0f172a;
+  --brand-text: #ffffff;
+}
+
+/* Apply branding colors to common elements */
+body {
+  background-color: var(--brand-background);
+  color: var(--brand-text);
+}
+
+/* Custom utility classes using branding colors */
+.bg-brand-primary {
+  background-color: var(--brand-primary) !important;
+}
+
+.bg-brand-secondary {
+  background-color: var(--brand-secondary) !important;
+}
+
+.bg-brand-accent {
+  background-color: var(--brand-accent) !important;
+}
+
+.bg-brand-background {
+  background-color: var(--brand-background) !important;
+}
+
+.text-brand-primary {
+  color: var(--brand-primary) !important;
+}
+
+.text-brand-accent {
+  color: var(--brand-accent) !important;
+}
+
+.text-brand-text {
+  color: var(--brand-text) !important;
+}
+
+.border-brand-primary {
+  border-color: var(--brand-primary) !important;
+}
+
+.border-brand-accent {
+  border-color: var(--brand-accent) !important;
+}
+
+.hover\:bg-brand-primary:hover {
+  background-color: var(--brand-primary) !important;
+}
+
+.hover\:text-brand-accent:hover {
+  color: var(--brand-accent) !important;
+}
+
+/* Apply to buttons using primary color */
+button[class*="bg-cyan-600"],
+button[class*="bg-sky-600"],
+.btn-primary {
+  background-color: var(--brand-primary) !important;
+}
+
+button[class*="bg-cyan-600"]:hover,
+button[class*="bg-sky-600"]:hover,
+.btn-primary:hover {
+  background-color: var(--brand-primary) !important;
+  filter: brightness(0.9);
+}
+
+/* Apply to links and accents */
+a[class*="text-cyan"],
+a[class*="text-sky"],
+.link-accent {
+  color: var(--brand-accent) !important;
+}
+
+a[class*="text-cyan"]:hover,
+a[class*="text-sky"]:hover,
+.link-accent:hover {
+  color: var(--brand-accent) !important;
+  filter: brightness(1.2);
+}
