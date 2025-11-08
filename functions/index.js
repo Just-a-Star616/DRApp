@@ -918,5 +918,11 @@ exports.notifyStaffOfNewMessage = functions.firestore
       return null;
     }
   });
+// Legacy migration function (can be removed after all data is migrated)
 const migrate = require('./migrate');
 exports.migrateApplicants = migrate.migrateApplicants;
+
+// Automatic migration system - runs on every new application
+const autoMigrate = require('./auto-migrate');
+exports.autoMigrateOnCreate = autoMigrate.autoMigrateOnCreate;
+exports.batchMigrateAll = autoMigrate.batchMigrateAll;

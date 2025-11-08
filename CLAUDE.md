@@ -328,6 +328,52 @@ Located in `functions/index.js`:
 - Includes link to admin dashboard
 - Uses same `googlechat.webhook` environment config
 
+**autoMigrateOnCreate**: Firestore trigger that automatically migrates new applications
+- Triggers on creation of any document in `applications` collection
+- Applies missing fields based on migration rules in `functions/auto-migrate.js`
+- Ensures backward compatibility when new fields are added to Application type
+- Logs all migrations applied for monitoring
+
+**batchMigrateAll**: HTTP function for batch migrating all existing applications
+- Endpoint: `https://us-central1-drapp-426.cloudfunctions.net/batchMigrateAll?key=migrate123`
+- Applies all migration rules to every application in the database
+- Returns summary of updated/skipped applications
+- Protected by migration key in function config
+
+### Automatic Migration System
+Located in `functions/auto-migrate.js`:
+
+**Purpose**: Ensures all applications have required fields, even if created with older code versions.
+
+**How it works**:
+1. Define migration rules in `MIGRATIONS` array
+2. Each rule has `name`, `check()`, and `apply()` functions
+3. `autoMigrateOnCreate` runs automatically on new applications
+4. `batchMigrateAll` can migrate all existing applications
+
+**Adding new fields**:
+1. Add field to `Application` interface in `src/types.ts`
+2. Add migration rule to `MIGRATIONS` array in `functions/auto-migrate.js`:
+   ```javascript
+   {
+     name: 'newField',
+     description: 'Add newField to all applications',
+     check: (appData) => appData.newField === undefined,
+     apply: (appData) => ({ newField: 'default value' })
+   }
+   ```
+3. Deploy functions: `firebase deploy --only functions`
+4. (Optional) Run batch migration: `curl "https://us-central1-drapp-426.cloudfunctions.net/batchMigrateAll?key=migrate123"`
+
+**Current migrations**:
+- `isLicensedDriver`: Sets based on badge/license presence
+- `unlicensedProgress`: Adds progress tracking for unlicensed drivers
+- `documents`: Ensures documents object exists
+- `hasOwnVehicle`: Sets based on vehicle details presence
+- `createdAt`: Adds timestamp if missing
+
+See `AUTO_MIGRATION_GUIDE.md` for detailed documentation.
+
 ### Service Worker
 - Implementation in `service-worker.js` at project root
 - Currently disabled in `src/App.tsx:119-131` (commented out)
