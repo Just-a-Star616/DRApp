@@ -27,6 +27,18 @@ const App: React.FC = () => {
   const [isAuthLoaded, setIsAuthLoaded] = useState(false);
   const [isBrandingLoaded, setIsBrandingLoaded] = useState(false);
 
+  // Apply branding colors as CSS variables
+  useEffect(() => {
+    if (branding) {
+      const root = document.documentElement;
+      root.style.setProperty('--brand-primary', branding.primaryColor || '#0ea5e9');
+      root.style.setProperty('--brand-secondary', branding.secondaryColor || '#0c4a6e');
+      root.style.setProperty('--brand-accent', branding.accentColor || '#06b6d4');
+      root.style.setProperty('--brand-background', branding.backgroundColor || '#0f172a');
+      root.style.setProperty('--brand-text', branding.textColor || '#ffffff');
+    }
+  }, [branding]);
+
   useEffect(() => {
     // Load branding directly from server (no cache) on mount
     const loadBranding = async () => {

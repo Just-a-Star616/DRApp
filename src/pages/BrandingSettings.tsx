@@ -17,6 +17,10 @@ const BrandingSettings: React.FC = () => {
   const [companyName, setCompanyName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [primaryColor, setPrimaryColor] = useState('');
+  const [secondaryColor, setSecondaryColor] = useState('');
+  const [accentColor, setAccentColor] = useState('');
+  const [backgroundColor, setBackgroundColor] = useState('');
+  const [textColor, setTextColor] = useState('');
   const [tagline, setTagline] = useState('');
 
   // Load current branding on mount
@@ -25,6 +29,10 @@ const BrandingSettings: React.FC = () => {
       setCompanyName(branding.companyName || '');
       setLogoUrl(branding.logoUrl || '');
       setPrimaryColor(branding.primaryColor || '#0ea5e9');
+      setSecondaryColor(branding.secondaryColor || '#0c4a6e');
+      setAccentColor(branding.accentColor || '#06b6d4');
+      setBackgroundColor(branding.backgroundColor || '#0f172a');
+      setTextColor(branding.textColor || '#ffffff');
       setTagline(branding.tagline || '');
     }
   }, [branding]);
@@ -62,6 +70,10 @@ const BrandingSettings: React.FC = () => {
           companyName,
           logoUrl,
           primaryColor,
+          secondaryColor: secondaryColor || '#0c4a6e',
+          accentColor: accentColor || '#06b6d4',
+          backgroundColor: backgroundColor || '#0f172a',
+          textColor: textColor || '#ffffff',
           tagline: tagline || '',
         },
         // Preserve other fields like statusSteps
@@ -88,6 +100,10 @@ const BrandingSettings: React.FC = () => {
     setCompanyName(branding?.companyName || '');
     setLogoUrl(branding?.logoUrl || '');
     setPrimaryColor(branding?.primaryColor || '#0ea5e9');
+    setSecondaryColor(branding?.secondaryColor || '#0c4a6e');
+    setAccentColor(branding?.accentColor || '#06b6d4');
+    setBackgroundColor(branding?.backgroundColor || '#0f172a');
+    setTextColor(branding?.textColor || '#ffffff');
     setTagline(branding?.tagline || '');
     setMessage('');
   };
@@ -145,7 +161,7 @@ const BrandingSettings: React.FC = () => {
           {/* Preview Section */}
           <div className="mb-8 p-6 bg-slate-800/50 rounded-lg border border-sky-700">
             <h3 className="text-lg font-semibold text-white mb-4">Preview</h3>
-            <div className="flex items-center gap-4 mb-4">
+            <div className="flex items-center gap-4 mb-6">
               {logoUrl && (
                 <img
                   src={logoUrl}
@@ -161,13 +177,32 @@ const BrandingSettings: React.FC = () => {
                 {tagline && <p className="text-sm text-slate-400">{tagline}</p>}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-400">Primary Color:</span>
-              <div
-                className="w-16 h-8 rounded border border-slate-600"
-                style={{ backgroundColor: primaryColor }}
-              ></div>
-              <span className="text-sm text-slate-300 font-mono">{primaryColor}</span>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-24">Primary:</span>
+                <div className="w-12 h-8 rounded border border-slate-600" style={{ backgroundColor: primaryColor }}></div>
+                <span className="text-xs text-slate-300 font-mono">{primaryColor}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-24">Secondary:</span>
+                <div className="w-12 h-8 rounded border border-slate-600" style={{ backgroundColor: secondaryColor }}></div>
+                <span className="text-xs text-slate-300 font-mono">{secondaryColor}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-24">Accent:</span>
+                <div className="w-12 h-8 rounded border border-slate-600" style={{ backgroundColor: accentColor }}></div>
+                <span className="text-xs text-slate-300 font-mono">{accentColor}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-24">Background:</span>
+                <div className="w-12 h-8 rounded border border-slate-600" style={{ backgroundColor: backgroundColor }}></div>
+                <span className="text-xs text-slate-300 font-mono">{backgroundColor}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 w-24">Text:</span>
+                <div className="w-12 h-8 rounded border border-slate-600" style={{ backgroundColor: textColor }}></div>
+                <span className="text-xs text-slate-300 font-mono">{textColor}</span>
+              </div>
             </div>
           </div>
 
@@ -232,7 +267,115 @@ const BrandingSettings: React.FC = () => {
                 />
               </div>
               <p className="mt-2 text-xs text-slate-500">
-                Choose a color or enter a hex color code (e.g., #0ea5e9)
+                Main brand color used for buttons and key elements
+              </p>
+            </div>
+
+            {/* Secondary Color */}
+            <div>
+              <label htmlFor="secondaryColor" className="block text-sm font-medium text-slate-300 mb-2">
+                Secondary Color
+              </label>
+              <div className="flex gap-3">
+                <input
+                  type="color"
+                  id="secondaryColor"
+                  value={secondaryColor}
+                  onChange={(e) => setSecondaryColor(e.target.value)}
+                  className="h-12 w-16 rounded cursor-pointer bg-slate-800 border border-slate-600"
+                />
+                <input
+                  type="text"
+                  value={secondaryColor}
+                  onChange={(e) => setSecondaryColor(e.target.value)}
+                  className="flex-1 px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-600 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all font-mono"
+                  placeholder="#0c4a6e"
+                  pattern="^#[0-9A-Fa-f]{6}$"
+                />
+              </div>
+              <p className="mt-2 text-xs text-slate-500">
+                Supporting color for secondary elements (default: #0c4a6e)
+              </p>
+            </div>
+
+            {/* Accent Color */}
+            <div>
+              <label htmlFor="accentColor" className="block text-sm font-medium text-slate-300 mb-2">
+                Accent Color
+              </label>
+              <div className="flex gap-3">
+                <input
+                  type="color"
+                  id="accentColor"
+                  value={accentColor}
+                  onChange={(e) => setAccentColor(e.target.value)}
+                  className="h-12 w-16 rounded cursor-pointer bg-slate-800 border border-slate-600"
+                />
+                <input
+                  type="text"
+                  value={accentColor}
+                  onChange={(e) => setAccentColor(e.target.value)}
+                  className="flex-1 px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-600 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all font-mono"
+                  placeholder="#06b6d4"
+                  pattern="^#[0-9A-Fa-f]{6}$"
+                />
+              </div>
+              <p className="mt-2 text-xs text-slate-500">
+                Highlight color for links and special elements (default: #06b6d4)
+              </p>
+            </div>
+
+            {/* Background Color */}
+            <div>
+              <label htmlFor="backgroundColor" className="block text-sm font-medium text-slate-300 mb-2">
+                Background Color
+              </label>
+              <div className="flex gap-3">
+                <input
+                  type="color"
+                  id="backgroundColor"
+                  value={backgroundColor}
+                  onChange={(e) => setBackgroundColor(e.target.value)}
+                  className="h-12 w-16 rounded cursor-pointer bg-slate-800 border border-slate-600"
+                />
+                <input
+                  type="text"
+                  value={backgroundColor}
+                  onChange={(e) => setBackgroundColor(e.target.value)}
+                  className="flex-1 px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-600 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all font-mono"
+                  placeholder="#0f172a"
+                  pattern="^#[0-9A-Fa-f]{6}$"
+                />
+              </div>
+              <p className="mt-2 text-xs text-slate-500">
+                Main background color for the application (default: #0f172a)
+              </p>
+            </div>
+
+            {/* Text Color */}
+            <div>
+              <label htmlFor="textColor" className="block text-sm font-medium text-slate-300 mb-2">
+                Text Color
+              </label>
+              <div className="flex gap-3">
+                <input
+                  type="color"
+                  id="textColor"
+                  value={textColor}
+                  onChange={(e) => setTextColor(e.target.value)}
+                  className="h-12 w-16 rounded cursor-pointer bg-slate-800 border border-slate-600"
+                />
+                <input
+                  type="text"
+                  value={textColor}
+                  onChange={(e) => setTextColor(e.target.value)}
+                  className="flex-1 px-4 py-3 rounded-lg bg-slate-800 text-white border border-slate-600 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all font-mono"
+                  placeholder="#ffffff"
+                  pattern="^#[0-9A-Fa-f]{6}$"
+                />
+              </div>
+              <p className="mt-2 text-xs text-slate-500">
+                Primary text color for content (default: #ffffff)
               </p>
             </div>
 

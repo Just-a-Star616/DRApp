@@ -82,8 +82,22 @@ The application supports two distinct user journeys:
 
 ### White-Label Configuration
 - Branding and status steps stored in Firestore `configs` collection (default document: `defaultConfig`)
-- Configuration loaded via `getDocFromServer` (bypasses cache) in `src/App.tsx:29-54`
-- Admin dashboard (`src/pages/AdminDashboard.tsx`) allows updating branding in real-time
+- Configuration loaded via `getDocFromServer` (bypasses cache) in `src/App.tsx`
+- **Branding Settings Page** (`src/pages/BrandingSettings.tsx`):
+  - Accessible at `/admin/branding` via paint brush icon in AdminDashboard header
+  - Configure: company name, logo URL, primary color, secondary color, accent color, background color, text color, tagline
+  - Live preview shows all color swatches with hex codes
+  - Color pickers with hex code input for each color
+  - Default values provided for all optional colors
+  - Automatic page reload after save to apply new branding
+- **CSS Variables**: Branding colors applied as CSS custom properties in `src/App.tsx`:
+  - `--brand-primary`: Primary color (buttons, key elements)
+  - `--brand-secondary`: Secondary color (supporting elements)
+  - `--brand-accent`: Accent color (links, highlights)
+  - `--brand-background`: Background color (page backgrounds)
+  - `--brand-text`: Text color (primary content text)
+  - Variables set on document root and available globally
+  - Falls back to default colors if branding not configured
 - Branding cache issue: Uses server fetch to ensure latest branding is always loaded
 
 ### Document Upload Flow
@@ -151,7 +165,14 @@ Tracks administrative progress (separate from licensing progress for unlicensed)
 - Submitted, Under Review, Contacted, Meeting Scheduled, Approved, Rejected
 
 **BrandingConfig Interface**:
-- companyName, logoUrl, primaryColor, tagline (optional)
+- companyName: Company name displayed across the app
+- logoUrl: URL to company logo image
+- primaryColor: Main brand color for buttons and key elements (required)
+- secondaryColor: Supporting color for secondary elements (optional, default: #0c4a6e)
+- accentColor: Highlight color for links and special elements (optional, default: #06b6d4)
+- backgroundColor: Main background color for the application (optional, default: #0f172a)
+- textColor: Primary text color for content (optional, default: #ffffff)
+- tagline: Optional tagline displayed below company name
 
 **Message Interface**:
 - Direct messaging between applicants and staff
