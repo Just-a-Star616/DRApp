@@ -141,14 +141,68 @@ firebase deploy --only functions
 5. Change the application status
 6. Verify notification is received
 
+## Service Worker Configuration
+
+The app uses `firebase-messaging-sw.js` for handling push notifications:
+
+**Location:** `public/firebase-messaging-sw.js`
+
+**Build Process:**
+- Vite custom plugin automatically copies service worker to `dist/` during build
+- Vercel configuration ensures correct MIME type (`application/javascript`)
+- Service worker excluded from SPA routing to prevent 404 errors
+
+**Vercel Configuration (`vercel.json`):**
+```json
+{
+  "headers": [
+    {
+      "source": "/firebase-messaging-sw.js",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/javascript; charset=utf-8"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/firebase-messaging-sw.js",
+      "destination": "/firebase-messaging-sw.js"
+    }
+  ]
+}
+```
+
+**Service Worker Registration:**
+- Automatically registers when user grants notification permission
+- Handles background messages when app is not in focus
+- Displays notifications with dynamic branding from payload
+- Click handler opens/focuses app at `/#/`
+
 ## Troubleshooting
 
 **Notifications not working?**
 - Check browser console for errors
 - Verify VAPID key is correct
 - Ensure FCM API is enabled in Google Cloud Console
-- Check that service worker is registered
-- Verify FCM token is saved to Firestore
+- Check that service worker is registered (DevTools → Application → Service Workers)
+- Verify FCM token is saved to Firestore (`fcmTokens` collection)
+
+**Service Worker fails to register?**
+- Error: "unsupported MIME type ('text/html')"
+  - Ensure `vercel.json` has correct headers configuration
+  - Verify `firebase-messaging-sw.js` exists in `dist/` after build
+  - Check that file is served with `Content-Type: application/javascript`
+- Error: "Failed to register service worker"
+  - Service workers require HTTPS (or localhost for development)
+  - Check browser console for detailed error messages
+  - Verify service worker file path is `/firebase-messaging-sw.js` (root level)
 
 **Admin can't log in?**
 - Verify their email is in the `admins` collection

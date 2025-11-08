@@ -374,12 +374,30 @@ Located in `functions/auto-migrate.js`:
 
 See `AUTO_MIGRATION_GUIDE.md` for detailed documentation.
 
-### Service Worker
-- Implementation in `service-worker.js` at project root
+### Service Worker & Push Notifications
+**Firebase Cloud Messaging Service Worker:**
+- Location: `public/firebase-messaging-sw.js`
+- Automatically copied to `dist/` during build via custom Vite plugin
+- Served with correct MIME type via Vercel configuration
+- Handles background push notifications from FCM
+- Uses dynamic branding from notification payload (logo, company name)
+
+**Configuration:**
+- Vercel serves with `Content-Type: application/javascript` header
+- Excluded from SPA rewrites to prevent 404/HTML responses
+- Registers at scope `/` with `Service-Worker-Allowed` header
+
+**Push Notification Flow:**
+1. User grants notification permission on login
+2. FCM token saved to `fcmTokens/{userId}` collection
+3. Cloud Function `sendPushNotification` sends notifications on status changes
+4. `sendCustomNotification` allows staff to send custom push notifications
+5. Service worker displays notifications with branding (icon, title)
+6. Clicking notification opens/focuses app at `/#/`
+
+**Legacy Service Worker:**
+- `service-worker.js` at project root (deprecated, use `firebase-messaging-sw.js`)
 - Currently disabled in `src/App.tsx:119-131` (commented out)
-- Enables push notifications for PWA capabilities
-- Uses dynamic branding from push notification payload
-- When re-enabled, ensure push notifications include branding data from Firestore config
 
 ### Project Structure
 - **Source directory**: All application code is in `src/` directory
@@ -391,15 +409,33 @@ See `AUTO_MIGRATION_GUIDE.md` for detailed documentation.
 
 **Configuration:**
 - `src/services/firebase.ts`: Firebase initialization and exports
-- `vite.config.ts`: Vite configuration with path alias (`@` -> `src/`) and GEMINI_API_KEY
+- `vite.config.ts`: Vite configuration with:
+  - Path alias (`@` -> `src/`)
+  - GEMINI_API_KEY environment variable
+  - Custom plugin to copy `firebase-messaging-sw.js` to dist during build
+- `vercel.json`: Vercel deployment configuration with:
+  - Service worker MIME type headers (`application/javascript`)
+  - Rewrite rules to exclude service worker from SPA routing
+  - `Service-Worker-Allowed` header for proper scope
 - `.env.local`: Environment variables (GEMINI_API_KEY for Gemini API integration)
 - `firebase.json`: Firebase project configuration (hosting, functions, firestore, storage)
 - `functions/package.json`: Cloud Functions dependencies (Node 20)
+
+**Service Workers:**
+- `public/firebase-messaging-sw.js`: FCM service worker for push notifications
+  - Copied to `dist/` during build by Vite plugin
+  - Handles background messages when app is not focused
+  - Displays notifications with dynamic branding
+  - Registers click handlers to open/focus app
+- `service-worker.js`: Legacy service worker (deprecated, currently unused)
 
 **Utility Scripts:**
 - `check-config.js` / `check-config.cjs`: Configuration validation scripts
 - `functions/check-config.js`: Validates Firebase Functions configuration
 - `functions/update-config.js`: Updates Firebase Functions configuration
+- `migrate-applicants.js` / `migrate-applicants.cjs`: Legacy migration scripts
+- `functions/auto-migrate.js`: Automatic migration system with reusable framework
+- `functions/migrate.js`: One-time migration Cloud Function (can be removed after migration)
 
 **Reference Data:**
 - `Licence Issuing Authorities.txt`: Complete list of 359 UK licensing authorities
