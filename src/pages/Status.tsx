@@ -7,12 +7,14 @@ import Button from '../components/Button';
 import NotificationBell from '../components/NotificationBell';
 import DocumentPreview from '../components/DocumentPreview';
 import FileUpload from '../components/FileUpload';
+import MessagingPanel from '../components/MessagingPanel';
+import UnreadMessageBadge from '../components/UnreadMessageBadge';
 import { auth, db, storage } from '../services/firebase';
 import { signOut } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { logActivity } from '../services/activityLog';
-import { ActivityType, ActivityActor } from '../types';
+import { ActivityType, ActivityActor, MessageSender } from '../types';
 
 const InfoRow: React.FC<{
   label: string,
@@ -1121,6 +1123,31 @@ const Status = () => {
                   <p className={`mt-2 text-sm ${uploadMessage.includes('Error') ? 'text-red-400' : 'text-green-400'}`}>
                     {uploadMessage}
                   </p>
+                )}
+              </div>
+
+              {/* Direct Messaging Section */}
+              <div className="mt-8 pt-8 border-t border-sky-800">
+                <div className="flex items-center gap-3 mb-4">
+                  <h2 className="text-xl font-semibold text-white">Messages</h2>
+                  {currentUser && (
+                    <UnreadMessageBadge
+                      applicationId={currentUser.uid}
+                      userType={MessageSender.Applicant}
+                    />
+                  )}
+                </div>
+                <p className="text-sm text-slate-400 mb-4">
+                  Have questions or need to share information? Send a direct message to our staff team.
+                  All your previous messages are saved here for your reference.
+                </p>
+                {currentUser && (
+                  <MessagingPanel
+                    applicationId={currentUser.uid}
+                    currentUserId={currentUser.uid}
+                    currentUserName={`${application.firstName} ${application.lastName}`}
+                    userType={MessageSender.Applicant}
+                  />
                 )}
               </div>
             </div>

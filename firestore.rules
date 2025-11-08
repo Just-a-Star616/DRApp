@@ -51,5 +51,24 @@ service cloud.firestore {
     match /scheduledNotifications/{notificationId} {
       allow read, write: if isAdmin();
     }
+
+    // Messages - applicants can read/write their own conversation, admins can read/write all
+    match /messages/{messageId} {
+      allow read: if request.auth != null &&
+                     (resource.data.applicationId == request.auth.uid || isAdmin());
+      allow create: if request.auth != null &&
+                       request.resource.data.keys().hasAll(['applicationId', 'senderId', 'senderName', 'senderType', 'message', 'timestamp', 'isRead']) &&
+                       request.resource.data.timestamp is number &&
+                       request.resource.data.applicationId is string &&
+                       request.resource.data.senderId == request.auth.uid && // Must be sending from own account
+                       request.resource.data.message is string &&
+                       request.resource.data.message.size() > 0 &&
+                       request.resource.data.message.size() <= 5000 && // Max 5000 characters
+                       request.resource.data.isRead == false; // New messages are unread
+      allow update: if request.auth != null &&
+                       (resource.data.applicationId == request.auth.uid || isAdmin()) &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'readAt']); // Can only mark as read
+      allow delete: if false; // Messages are immutable, cannot be deleted
+    }
   }
 }

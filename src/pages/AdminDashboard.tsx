@@ -9,8 +9,10 @@ import { useAppContext } from '../contexts/AppContext';
 import Button from '../components/Button';
 import SendNotificationModal from '../components/SendNotificationModal';
 import ActivityLogViewer from '../components/ActivityLogViewer';
+import MessagingPanel from '../components/MessagingPanel';
+import UnreadMessageBadge from '../components/UnreadMessageBadge';
 import { logActivity } from '../services/activityLog';
-import { ActivityType, ActivityActor } from '../types';
+import { ActivityType, ActivityActor, MessageSender } from '../types';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -514,7 +516,13 @@ const AdminDashboard: React.FC = () => {
                   filteredApplications.map((app) => (
                     <tr key={app.id} className="hover:bg-slate-800/30">
                       <td className="px-4 py-4 text-sm text-white">
-                        {app.firstName} {app.lastName}
+                        <div className="flex items-center gap-2">
+                          <span>{app.firstName} {app.lastName}</span>
+                          <UnreadMessageBadge
+                            applicationId={app.id}
+                            userType={MessageSender.Staff}
+                          />
+                        </div>
                       </td>
                       <td className="px-4 py-4 text-sm text-slate-300">
                         <div>{app.email}</div>
@@ -1387,6 +1395,23 @@ const AdminDashboard: React.FC = () => {
                 </div>
                 {isUpdating && (
                   <p className="mt-2 text-sm text-cyan-400">Updating status and sending notification...</p>
+                )}
+              </div>
+
+              {/* Direct Messaging */}
+              <div className="mb-6 p-4 bg-slate-800/50 rounded-lg">
+                <h3 className="font-semibold text-white mb-3">Direct Messages</h3>
+                <p className="text-sm text-slate-400 mb-4">
+                  Communicate directly with the applicant. All messages are saved and visible to all staff members.
+                </p>
+                {auth.currentUser && (
+                  <MessagingPanel
+                    applicationId={selectedApplication.id}
+                    currentUserId={auth.currentUser.uid}
+                    currentUserName={auth.currentUser.email || 'Staff'}
+                    userType={MessageSender.Staff}
+                    applicantName={`${selectedApplication.firstName} ${selectedApplication.lastName}`}
+                  />
                 )}
               </div>
 

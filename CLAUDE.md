@@ -153,6 +153,14 @@ Tracks administrative progress (separate from licensing progress for unlicensed)
 **BrandingConfig Interface**:
 - companyName, logoUrl, primaryColor, tagline (optional)
 
+**Message Interface**:
+- Direct messaging between applicants and staff
+- Fields: id, applicationId, senderId, senderName, senderType, message, timestamp, isRead, readAt
+- senderType: MessageSender enum (Applicant or Staff)
+- Messages immutable once sent - cannot be edited or deleted
+- Auto-marked as read when recipient views conversation
+- Real-time synchronization via Firestore listeners
+
 **ActivityLog Interface**:
 - Comprehensive tracking of all actions performed by staff and applicants
 - Fields: id, applicationId, applicantName, applicantEmail, timestamp
@@ -161,6 +169,63 @@ Tracks administrative progress (separate from licensing progress for unlicensed)
 - actorId, actorName: Identity of the person who performed the action
 - details: Human-readable description of the activity
 - metadata: Optional object containing additional context (old/new values, document types, etc.)
+
+### Direct Messaging System
+The application includes a real-time direct messaging system for communication between applicants and staff:
+
+**Features**:
+- **Real-time messaging**: Messages appear instantly using Firestore listeners
+- **Unread indicators**: Visual badges show unread message counts for both staff and applicants
+- **Read receipts**: Messages show "Sent" or "Read" status for sender
+- **Message history**: All messages saved and accessible for reference (viewing 'missed' notifications)
+- **Bi-directional**: Both applicants and staff can initiate conversations
+
+**Implementation** (`src/services/messaging.ts`):
+- `sendMessage()`: Send a new message in a conversation
+- `subscribeToMessages()`: Real-time listener for conversation messages
+- `markMessageAsRead()`: Mark individual message as read
+- `markConversationAsRead()`: Batch mark all unread messages in conversation
+- `subscribeToUnreadCount()`: Real-time listener for unread message count
+- `subscribeToAllConversations()`: Get all conversations with metadata (staff dashboard)
+
+**UI Components**:
+- `MessagingPanel` (`src/components/MessagingPanel.tsx`): Chat interface with message input/display
+  - Auto-scrolls to latest messages
+  - Shows sender name and timestamp
+  - Displays read status for sent messages
+  - Supports Enter to send, Shift+Enter for new line
+  - Character limit: 5000 characters per message
+- `UnreadMessageBadge` (`src/components/UnreadMessageBadge.tsx`): Displays unread count badge
+  - Shows in AdminDashboard application list (next to applicant names)
+  - Shows in Status page Messages section header
+  - Red badge with count, hidden when zero
+
+**Applicant View** (`src/pages/Status.tsx`):
+- Messages section at bottom of status page
+- Can send messages to staff team
+- View message history
+- Unread badge on section header
+- All messages visible to all staff members (mentioned in UI)
+
+**Staff View** (`src/pages/AdminDashboard.tsx`):
+- MessagingPanel in application detail modal
+- Unread badges in application list show which applicants need responses
+- Messages visible to all staff members
+- Can view full conversation history per applicant
+
+**Security** (Firestore rules in `firestore.rules`):
+- Applicants can read/write messages for their own application only
+- Staff (admins) can read/write all messages
+- Messages must include required fields and proper validation
+- senderId must match authenticated user (prevents impersonation)
+- Messages immutable - cannot be edited or deleted after sending
+- Updates restricted to marking as read only
+
+**Data Storage**:
+- Collection: `messages` in Firestore
+- Indexed by: applicationId + timestamp (for conversation retrieval)
+- Indexed by: applicationId + senderType + isRead (for unread counts)
+- No file attachments - text messages only
 
 ### Activity Logging System
 The application includes comprehensive activity logging to track all actions by staff and applicants:
@@ -288,6 +353,12 @@ Update `src/services/firebase.ts` with Firebase project credentials before deplo
   - Contains ActivityLog documents with activity type, actor, details, and metadata
   - Indexed by timestamp for efficient querying
   - Immutable once created (Firestore rules prevent updates/deletes)
+- `messages`: Direct messaging between applicants and staff
+  - Auto-created when messages are sent via `sendMessage()` service
+  - Contains Message documents with sender info, message content, and read status
+  - Indexed by applicationId + timestamp for conversation retrieval
+  - Indexed by applicationId + senderType + isRead for unread counts
+  - Immutable once sent (Firestore rules prevent edits/deletes, only allow marking as read)
 
 **Firebase Functions Config:**
 ```bash
@@ -303,7 +374,11 @@ firebase functions:config:set googlechat.webhook="https://chat.googleapis.com/v1
 **Firestore Indexes:**
 - `firestore.indexes.json`: Composite indexes configuration
   - Activity logs indexed by `applicationId` (ascending) + `timestamp` (descending)
-  - Required for querying activity logs per application sorted by time
+    - Required for querying activity logs per application sorted by time
+  - Messages indexed by `applicationId` (ascending) + `timestamp` (ascending)
+    - Required for retrieving conversation messages in chronological order
+  - Messages indexed by `applicationId` (ascending) + `senderType` (ascending) + `isRead` (ascending)
+    - Required for counting unread messages per conversation and sender type
   - Deploy via: `firebase deploy --only firestore:indexes`
 
 ## Key Implementation Details

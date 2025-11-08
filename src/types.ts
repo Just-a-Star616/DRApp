@@ -118,3 +118,32 @@ export interface ActivityLog {
     [key: string]: any; // Allow additional metadata
   };
 }
+
+// Direct Messaging Types
+export enum MessageSender {
+  Applicant = 'Applicant',
+  Staff = 'Staff',
+}
+
+export interface Message {
+  id: string; // Auto-generated document ID
+  applicationId: string; // UID of the application this message relates to
+  senderId: string; // UID of the sender (staff or applicant)
+  senderName: string; // Name of the sender for display
+  senderType: MessageSender; // Whether sent by staff or applicant
+  message: string; // Message content
+  timestamp: number; // Unix timestamp
+  isRead: boolean; // Whether the message has been read by recipient
+  readAt?: number; // Timestamp when message was read
+}
+
+export interface Conversation {
+  applicationId: string;
+  applicantName: string;
+  applicantEmail: string;
+  lastMessage?: string;
+  lastMessageTimestamp?: number;
+  lastMessageSender?: MessageSender;
+  unreadCountStaff: number; // Unread count for staff
+  unreadCountApplicant: number; // Unread count for applicant
+}
